@@ -8,9 +8,23 @@ import AppKit
 /// executable alone (see the Makefile). Paths are from Simple Icons (CC0); the marks are their owners' trademarks.
 @MainActor
 enum ProviderMark {
-    /// Nil for a provider without a mark, whose reading is then drawn without one.
-    static func image(for provider: ProviderID) -> NSImage? {
-        images[provider]
+    /// A provider without a logo, such as one found in T3 Code, is marked with the first letter of `name`.
+    static func image(for provider: ProviderID, named name: String) -> NSImage {
+        images[provider] ?? monogram(name)
+    }
+
+    /// Drawn on the logos' 24-unit grid, so it scales down to the same size and weight as they do.
+    private static func monogram(_ name: String) -> NSImage {
+        let letter = (name.first.map { String($0).uppercased() } ?? "?") as NSString
+        let font = NSFont.systemFont(ofSize: 24, weight: .heavy)
+        let attributes: [NSAttributedString.Key: Any] = [.font: font, .foregroundColor: NSColor.black]
+        return NSImage(size: NSSize(width: 24, height: 24), flipped: false) { bounds in
+            let width = letter.size(withAttributes: attributes).width
+            // Centres the capital, not the line box, which has room below for descenders.
+            letter.draw(at: NSPoint(x: bounds.midX - width / 2, y: bounds.midY - font.capHeight / 2 + font.descender),
+                        withAttributes: attributes)
+            return true
+        }
     }
 
     private static let images: [ProviderID: NSImage] = paths.compactMapValues { path in

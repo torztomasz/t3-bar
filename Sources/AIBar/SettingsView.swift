@@ -22,9 +22,20 @@ struct SettingsView: View {
                     refreshIntervalPicker
                     openShortcutRecorder
                 }
-                Section("Providers") {
+                Section {
                     ForEach(usage.providers, id: \.id) { provider in
                         placementPicker(for: provider)
+                    }
+                } header: {
+                    Text("Providers")
+                } footer: {
+                    if isMenuBarFull && usage.providers.count > AppSettings.menuBarCapacity {
+                        Text("""
+                            The menu bar fits \(AppSettings.menuBarCapacity) providers. \
+                            Move one to Popover only to make room.
+                            """)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
                     }
                 }
             }
@@ -67,29 +78,41 @@ struct SettingsView: View {
     /// only chosen for the menu bar.
     ///
     /// Lists what the badge would actually show: a stored window the snapshot no longer reports is displayed as the
-    /// primary window it falls back to. Until the provider has reported, only the default can be named.
+    /// primary window it falls back to, and a provider placed in a menu bar that was already full as Popover only.
+    /// Until the provider has reported, only the default window can be named.
     private func placementPicker(for provider: any UsageProvider) -> some View {
         let settings = settingsStore.settings
         let state = usage.states.first { $0.id == provider.id }
         let windows = state?.snapshot?.windows ?? []
         let shownWindowID = state?.badgeWindow(for: settings.badgeWindowIDs[provider.id])?.id
+        let isInMenuBar = menuBarProviders.contains(provider.id)
+        let placement = settings.placement(of: provider.id, defaultingTo: provider.defaultPlacement)
+        let shownPlacement = placement == .menuBar && !isInMenuBar ? .popoverOnly : placement
+        let hasNoRoom = !isInMenuBar && isMenuBarFull
         return Picker(provider.displayName, selection: Binding(
-            get: { ProviderChoice(placement: settings.placement(of: provider.id, defaultingTo: provider.defaultPlacement),
-                                  windowID: shownWindowID) },
+            get: { ProviderChoice(placement: shownPlacement, windowID: shownWindowID) },
             set: { choice in settingsStore.update { choice.apply(to: &$0, for: provider.id) } }
         )) {
             Section("Menu bar and popover") {
                 if windows.isEmpty {
-                    Text("5-hour").tag(ProviderChoice.menuBar(windowID: shownWindowID))
+                    Text("5-hour").tag(ProviderChoice.menuBar(windowID: shownWindowID)).disabled(hasNoRoom)
                 }
                 ForEach(windows) { window in
-                    Text(window.title).tag(ProviderChoice.menuBar(windowID: window.id))
+                    Text(window.title).tag(ProviderChoice.menuBar(windowID: window.id)).disabled(hasNoRoom)
                 }
             }
             Divider()
             Text("Popover only").tag(ProviderChoice.popoverOnly)
             Text("Off").tag(ProviderChoice.off)
         }
+    }
+
+    private var menuBarProviders: [ProviderID] {
+        settingsStore.settings.menuBarProviders(among: usage.providers.map { ($0.id, $0.defaultPlacement) })
+    }
+
+    private var isMenuBarFull: Bool {
+        menuBarProviders.count >= AppSettings.menuBarCapacity
     }
 
     private var openShortcutRecorder: some View {

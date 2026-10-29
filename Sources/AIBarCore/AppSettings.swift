@@ -13,6 +13,9 @@ public struct AppSettings: Equatable, Sendable {
     /// so it is the user's to claim.
     public var openPopoverShortcut: GlobalShortcut?
 
+    /// The badge stacks its readings in a menu bar about 22 pt tall, which fits two legibly (see `BadgeLayout`).
+    public static let menuBarCapacity = 2
+
     /// Short enough to follow a busy session, long enough to stay far from the endpoint's rate limits.
     public static let refreshIntervalChoices: [Duration] = [1, 2, 5, 10, 15].map(Duration.minutes)
     public static let defaultRefreshInterval: Duration = .minutes(5)
@@ -30,6 +33,15 @@ public struct AppSettings: Equatable, Sendable {
     public func placement(of provider: ProviderID, defaultingTo defaultPlacement: ProviderPlacement)
         -> ProviderPlacement {
         providerPlacements[provider] ?? defaultPlacement
+    }
+
+    /// The providers the badge shows: those placed in the menu bar, up to `menuBarCapacity`, earliest in `providers`
+    /// first. Settings stops more being placed there, but a provider T3 Code stopped reporting can come back after
+    /// two others took its place.
+    public func menuBarProviders(among providers: [(id: ProviderID, defaultPlacement: ProviderPlacement)])
+        -> [ProviderID] {
+        Array(providers.filter { placement(of: $0.id, defaultingTo: $0.defaultPlacement) == .menuBar }.map(\.id)
+            .prefix(Self.menuBarCapacity))
     }
 
     /// Kept even when it matches the default, which can differ between providers.

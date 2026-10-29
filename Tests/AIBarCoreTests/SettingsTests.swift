@@ -48,6 +48,36 @@ import Testing
     }
 }
 
+// Method: place providers through `place` and ask which the badge shows, listing them in the app's provider order:
+// Claude, ChatGPT, then T3 Code's.
+@Suite struct MenuBarCapacity {
+    @Test func theBadgeShowsEveryProviderPlacedThereWhileTheyFit() {
+        var settings = AppSettings()
+        settings.place(chatGPT, .popoverOnly)
+        settings.place(antigravity, .menuBar)
+
+        #expect(settings.menuBarProviders(among: appProviders) == [claude, antigravity])
+    }
+
+    // E.g. Antigravity was placed in the menu bar, dropped out of T3 Code while Claude and ChatGPT filled it, and
+    // came back.
+    @Test func aProviderPlacedThereAfterItFilledUpIsLeftOut() {
+        var settings = AppSettings()
+        settings.place(antigravity, .menuBar)
+
+        #expect(settings.menuBarProviders(among: appProviders) == [claude, chatGPT])
+    }
+
+    @Test func nothingPlacedThereLeavesItEmpty() {
+        var settings = AppSettings()
+        for (provider, _) in appProviders {
+            settings.place(provider, .popoverOnly)
+        }
+
+        #expect(settings.menuBarProviders(among: appProviders).isEmpty)
+    }
+}
+
 // Method: every test gets its own `UserDefaults` suite, removed afterwards, so nothing leaks into the real app's
 // preferences or between tests. "Survives a relaunch" is checked by opening a second store on the same suite.
 @MainActor @Suite struct SettingsPersistence {
@@ -228,6 +258,9 @@ import Testing
 
 private let claude = ProviderID("claude")
 private let antigravity = ProviderID("t3code:antigravity")
+private let appProviders: [(id: ProviderID, defaultPlacement: ProviderPlacement)] = [
+    (claude, .menuBar), (chatGPT, .menuBar), (antigravity, .popoverOnly),
+]
 private let chatGPT = ProviderID("chatgpt")
 
 @MainActor private func withIsolatedDefaults(_ body: (UserDefaults) -> Void) {

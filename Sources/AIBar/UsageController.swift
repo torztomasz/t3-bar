@@ -170,10 +170,6 @@ struct ProviderState: Identifiable {
         defaultPlacement = provider.defaultPlacement
     }
 
-    func placement(in settings: AppSettings) -> ProviderPlacement {
-        settings.placement(of: id, defaultingTo: defaultPlacement)
-    }
-
     /// Derived rather than stored so it can never disagree with the snapshot it describes.
     var lastRefreshedAt: Date? { snapshot?.fetchedAt }
 

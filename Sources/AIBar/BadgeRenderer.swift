@@ -7,7 +7,7 @@ import AppKit
 enum BadgeRenderer {
     /// One provider's reading. `mark` is only drawn when readings are stacked (see `BadgeLayout`).
     struct Row {
-        let mark: NSImage?
+        let mark: NSImage
         let text: String
     }
 
@@ -44,7 +44,7 @@ enum BadgeRenderer {
                 let origin = NSPoint(x: bounds.maxX - textSize.width, y: midline - textSize.height / 2)
                 (row.text as NSString).draw(at: origin, withAttributes: attributes)
                 if let markSize = layout.markSize {
-                    row.mark?.draw(in: NSRect(x: bounds.minX, y: midline - markSize / 2, width: markSize,
+                    row.mark.draw(in: NSRect(x: bounds.minX, y: midline - markSize / 2, width: markSize,
                                               height: markSize))
                 }
             }

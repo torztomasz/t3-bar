@@ -50,11 +50,13 @@ final class StatusItemController: NSObject {
 
     /// Badge and tooltip both describe, for each provider, the window chosen for it in settings.
     private func render() {
-        let readings = shownStates.filter { $0.placement(in: settingsStore.settings) == .menuBar }.map { state in
+        let inMenuBar = settingsStore.settings.menuBarProviders(among: shownStates.map { ($0.id, $0.defaultPlacement) })
+        let readings = shownStates.filter { inMenuBar.contains($0.id) }.map { state in
             BadgeReading(state: state, window: state.badgeWindow(for: settingsStore.settings.badgeWindowIDs[state.id]))
         }
         let height = BadgeSize.height(menuBarHeights: NSScreen.screens.map(\.menuBarHeight))
-        let rows = readings.map { BadgeRenderer.Row(mark: ProviderMark.image(for: $0.state.id), text: $0.text) }
+        let rows = readings.map { BadgeRenderer.Row(mark: ProviderMark.image(for: $0.state.id, named: $0.state.displayName),
+                                                        text: $0.text) }
         statusItem.button?.image = rows.isEmpty
             ? BadgeRenderer.placeholder(height: height)
             : BadgeRenderer.image(rows: rows, height: height)
