@@ -1,4 +1,4 @@
-# AI Bar
+# T3 Bar
 
 A companion menu bar app for [T3 Code](https://github.com/pingdotgg/t3code) that shows how much of your AI
 provider rate limits you have used, and whether you are on pace to run out before the window resets.
@@ -9,7 +9,7 @@ it there is nothing to show.
 
 <img src="docs/screenshots/popover.png" alt="The menu bar reading and the popover with Claude and ChatGPT, annotated: usage so far, projected usage at reset, how much of the window has passed, and how long you would be locked out" width="750">
 
-> **A personal project.** I built AI Bar for myself, and it is opinionated to match how I work: the
+> **A personal project.** I built T3 Bar for myself, and it is opinionated to match how I work: the
 > providers I use, the windows I care about, the defaults I like. It is public in case it is useful to
 > someone else.
 
@@ -36,7 +36,7 @@ it there is nothing to show.
 A rate-limit window opens at 0% on its first request, so usage is 0 at `resetsAt - windowLength`.
 That anchor plus every reading taken during the window gives a least-squares line; extending it to
 the reset time yields the projected usage. Readings are stored per window under
-`~/Library/Application Support/AI Bar/` so the estimate survives restarts. The 5-hour window is
+`~/Library/Application Support/T3 Bar/` so the estimate survives restarts. The 5-hour window is
 5 hours long, the weekly windows are 7 days.
 
 ## Settings
@@ -51,16 +51,16 @@ marked in the pill with its initial. With no provider in the menu bar the item
 shows a gauge icon, so the popover stays within reach. A Hyper key (all of ⌃⌥⇧⌘, e.g. Caps Lock remapped by Karabiner-Elements or Raycast)
 shows as ✦. The shortcut needs ⌃ or ⌘ unless it is a function key, because macOS 15 ignores global shortcuts
 built from ⌥ and ⇧ alone. Changes apply at once and are kept in the
-app's user defaults (`defaults read com.torz.aibar`).
+app's user defaults (`defaults read com.torz.t3bar`).
 
 ## How the data is fetched
 
 T3 Code keeps a status file per provider instance in `~/.t3/caches/<instance>.json` (or under `T3CODE_HOME`),
 with the rate-limit windows it last saw. It fills them from its own probes, every 5 minutes while it runs, and
-from its sessions. AI Bar only reads those files: it holds no tokens and calls no provider. A provider appears as
+from its sessions. T3 Bar only reads those files: it holds no tokens and calls no provider. A provider appears as
 soon as T3 Code reports usage for it, and each reading is dated by when T3 Code took it, so when T3 Code is closed
 the popover's "Updated … ago" shows how old the numbers are. The files are T3 Code's internal cache, not a
-published API, so a file AI Bar cannot read counts as no reading.
+published API, so a file T3 Bar cannot read counts as no reading.
 
 ## Requirements
 
@@ -84,17 +84,17 @@ are kept, because they live outside the bundle.
 ```
 make build   # swift build
 make test    # swift test
-make app     # bundle dist/AI Bar.app
+make app     # bundle dist/T3 Bar.app
 make run     # build and launch the app bundle
 ```
 
 ## Project layout
 
 ```
-Sources/AIBarCore   Foundation-only library: model, T3 Code reading, forecasting, text, badge and bar
+Sources/T3BarCore   Foundation-only library: model, T3 Code reading, forecasting, text, badge and bar
                     geometry. Everything here is unit-tested without AppKit.
-Sources/AIBar       The menu bar app: status item, badge rendering, popover, polling controller.
-Tests/AIBarCoreTests
+Sources/T3Bar       The menu bar app: status item, badge rendering, popover, polling controller.
+Tests/T3BarCoreTests
 Support/Info.plist  Bundle metadata (LSUIElement, so no Dock icon).
 tickets/            The design notes each part was built from, in dependency order.
 ```

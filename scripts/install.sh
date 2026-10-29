@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Installs AI Bar into /Applications, or updates it in place if it is already there.
+# Installs T3 Bar into /Applications, or updates it in place if it is already there.
 # Safe to re-run: every run pulls the latest code, rebuilds, and swaps the app bundle.
 set -euo pipefail
 
@@ -10,8 +10,8 @@ main() {
     install_bundle "$(install_dir)"
 }
 
-readonly BUNDLE_ID="com.torz.aibar"
-readonly APP_NAME="AI Bar.app"
+readonly BUNDLE_ID="com.torz.t3bar"
+readonly APP_NAME="T3 Bar.app"
 readonly BUILT_APP="dist/$APP_NAME"
 
 pull_latest() {
@@ -28,7 +28,7 @@ build_bundle() {
     echo "==> Building"
     make app
     # The linker's ad-hoc signature covers only the binary; signing the bundle binds Info.plist to it, so the
-    # system sees one stable identity (com.torz.aibar) for the login item across updates.
+    # system sees one stable identity (com.torz.t3bar) for the login item across updates.
     codesign --force --sign - "$BUILT_APP"
 }
 
@@ -54,20 +54,20 @@ install_bundle() {
     rm -rf "$target"
     ditto "$BUILT_APP" "$target"
     open "$target"
-    echo "==> Done, AI Bar is running from $target"
+    echo "==> Done, T3 Bar is running from $target"
 }
 
 # Replacing the bundle under a running process leaves the old binary in memory until the next login, so the
 # update would look like it did nothing.
 quit_running_app() {
     # Guarded because telling an app that is not running to quit launches it first.
-    pgrep -x AIBar >/dev/null || return 0
+    pgrep -x T3Bar >/dev/null || return 0
     osascript -e "tell application id \"$BUNDLE_ID\" to quit" >/dev/null 2>&1 || true
     for _ in {1..20}; do
-        pgrep -x AIBar >/dev/null || return 0
+        pgrep -x T3Bar >/dev/null || return 0
         sleep 0.25
     done
-    pkill -x AIBar || true
+    pkill -x T3Bar || true
 }
 
 main "$@"
