@@ -12,7 +12,7 @@ import Testing
         #expect(snapshot.primaryWindow == fiveHour)
     }
 
-    // E.g. ChatGPT on a weekly-only plan, or Antigravity through T3 Code: still something to show.
+    // E.g. Codex on a weekly-only plan, or Antigravity: still something to show.
     @Test func isTheFirstWindowWhenTheProviderReportsNoFiveHourWindow() {
         let weekly = window("weekly_all", kind: .weekly)
         let snapshot = snapshot(windows: [

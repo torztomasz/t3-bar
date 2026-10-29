@@ -57,20 +57,6 @@ import Testing
         #expect(abs(rate - 21) < 1e-9)
     }
 
-    // Before per-window files, the 5-hour history lived in `samples-<provider>.json`. Its 1% reading at 1h must
-    // still count after the upgrade, giving the same 21%/h as above rather than the 19.67%/h of the 59% alone.
-    @Test func adoptsTheFiveHourHistoryFromBeforePerWindowFiles() throws {
-        let legacyFile = directory.appending(path: "samples-claude.json", directoryHint: .notDirectory)
-        SampleStore(fileURL: legacyFile, windowLength: FixtureWindow.length)
-            .append(UsageSample(at: FixtureWindow.time(hours: 1), percentUsed: 1), resetsAt: FixtureWindow.resetsAt)
-
-        let forecasts = WindowForecaster(directory: directory).forecasts(for: snapshot(
-            at: FixtureWindow.time(hours: 3), [.fiveHour(percent: 59, resetsAt: FixtureWindow.resetsAt)]))
-
-        let rate = try #require(forecasts["session"]?.ratePercentPerHour)
-        #expect(abs(rate - 21) < 1e-9)
-    }
-
     // The file name is the only place the history is found again after a restart, so it must be the same for the
     // same window every time and free of `:` and `·`, which the ids carry. Each character becomes its UTF-8 bytes in
     // %XX form: `:` is 3A, `·` is C2 B7.

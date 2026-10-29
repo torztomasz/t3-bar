@@ -2,10 +2,10 @@ import Foundation
 
 /// The usage T3 Code already tracks for every provider it runs, read from the status file it keeps per provider
 /// instance (`<T3CODE_HOME>/caches/<instance>.json`). Nothing to set up: T3 Code's own sessions and probes fill the
-/// files, and AI Bar only reads them.
+/// files, and the app only reads them.
 ///
 /// The files are T3 Code's internal cache rather than a published API, so reading is best effort: a file that is
-/// missing, unreadable or shaped differently reads as "no reading" and AI Bar asks the provider itself instead.
+/// missing, unreadable or shaped differently reads as "no reading".
 public struct T3CodeProviderCache: Sendable {
     public let directory: URL
 
@@ -63,9 +63,8 @@ public struct T3CodeProviderInstance: Equatable, Sendable {
     /// Nil while there is no window to show.
     public let usage: T3CodeUsage?
 
-    /// The instances T3 Code creates for Claude and Codex out of the box, which AI Bar can also read without T3 Code.
-    public static let defaultClaudeID = "claudeAgent"
-    public static let defaultCodexID = "codex"
+    /// The instances T3 Code creates out of the box, for Claude and for Codex, in the order the app lists them.
+    public static let builtInIDs = ["claudeAgent", "codex"]
 }
 
 /// The windows of one instance as T3 Code last saw them.
@@ -116,10 +115,20 @@ extension T3CodeProviderStatus.Window {
                 ? .weeklyModel(name: String(label.dropFirst(Self.modelLabelPrefix.count))) : .weekly
         default: .other
         }
-        // T3 Code calls the 5-hour window "Session"; the rest of AI Bar calls it by its length.
+        // T3 Code calls the 5-hour window "Session"; the rest of the app calls it by its length.
         return UsageWindow(id: id, kind: kind, title: kind == .fiveHour ? "5-hour" : label,
                            percentUsed: usedPercent, resetsAt: resetsAt)
     }
 
     private static let modelLabelPrefix = "Weekly · "
+}
+
+/// T3 Code writes millisecond fractions (`2026-10-29T15:50:00.454Z`), but a whole-second timestamp is equally valid
+/// ISO-8601, so both are accepted rather than dropping the date.
+private func parseResetDate(_ text: String) -> Date? {
+    let formatter = ISO8601DateFormatter()
+    formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+    if let date = formatter.date(from: text) { return date }
+    formatter.formatOptions = [.withInternetDateTime]
+    return formatter.date(from: text)
 }

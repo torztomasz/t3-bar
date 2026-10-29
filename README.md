@@ -1,11 +1,11 @@
 # AI Bar
 
-A macOS menu bar app that shows how much of your AI provider rate limits you have used, and whether
-you are on pace to run out before the window resets.
+A companion menu bar app for [T3 Code](https://github.com/pingdotgg/t3code) that shows how much of your AI
+provider rate limits you have used, and whether you are on pace to run out before the window resets.
 
-It shows Claude and ChatGPT, plus every other provider T3 Code tracks usage for, such as
-Antigravity or a second Codex account. It reuses what T3 Code, Claude Code and Codex already know, so there is
-nothing to log in to or set up. More providers plug in behind the `UsageProvider` protocol.
+It shows every provider T3 Code tracks usage for: Claude, Codex, Antigravity, a second Codex account. It reads
+the usage T3 Code already keeps, so with T3 Code installed there is nothing to log in to or set up, and without
+it there is nothing to show.
 
 <img src="docs/screenshots/popover.png" alt="The menu bar reading and the popover with Claude and ChatGPT, annotated: usage so far, projected usage at reset, how much of the window has passed, and how long you would be locked out" width="750">
 
@@ -16,7 +16,7 @@ nothing to log in to or set up. More providers plug in behind the `UsageProvider
 ## What you see
 
 - **Menu bar reading** with the 5-hour window usage, for example `42%`, in the menu bar's own text colour
-  like the clock beside it. With both providers on, their readings are stacked, Claude above ChatGPT, each
+  like the clock beside it. With two providers there, their readings are stacked, Claude above Codex, each
   behind its provider's logo, so the item stays as narrow as one reading. Whether you are on pace to run out
   shows in the tooltip and the popover.
 - **Left click** opens a popover with every limit window of every provider: 5-hour, weekly, and weekly per
@@ -26,8 +26,9 @@ nothing to log in to or set up. More providers plug in behind the `UsageProvider
   passed: a fill past the cursor means usage is running ahead of time. A line underneath says how
   long you will be locked out (`Locked out for ~1h 20m`, or `~2d 19h` for a day or more, in red) or
   that the window `Lasts to reset`.
-- **Right click**, or Refresh in the popover, refreshes immediately; a light runs round the pill
-  and the icon turns while it runs, and the icon shows a checkmark once fresh data is in. The app also polls every 5 minutes and after the Mac wakes.
+- **Right click**, or Refresh in the popover, re-reads T3 Code's latest readings at once; a light runs round
+  the pill and the icon turns while it runs, and the icon shows a checkmark once the data is in. The app also
+  re-reads every 5 minutes and after the Mac wakes.
 - Hover the pill for a tooltip with the reset countdown and, when you are on pace to run out, the lockout.
 
 ## How the forecast works
@@ -40,12 +41,13 @@ the reset time yields the projected usage. Readings are stored per window under
 
 ## Settings
 
-Settings… in the popover (or ⌘, while it is open) opens Settings: launch at login, how often to refresh
+Settings… in the popover (or ⌘, while it is open) opens Settings: launch at login, how often to re-read T3 Code's readings
 (1 to 15 minutes, default 5) and an optional shortcut that opens the popover from
 any app (none by default). Each provider has one choice: which of its windows the pill shows, "Popover only", which keeps it
 out of the menu bar, or "Off", which also stops fetching it. The menu bar fits two providers, so once two are there no
-other can be placed there until one makes room. Providers found in T3 Code start out "Popover only", and any
-provider without a logo is marked in the pill with its initial. With no provider in the menu bar the item
+other can be placed there until one makes room. T3 Code's built-in Claude and Codex start out in the menu bar,
+any other provider "Popover only". Every Codex account gets the OpenAI logo, and a provider without a logo is
+marked in the pill with its initial. With no provider in the menu bar the item
 shows a gauge icon, so the popover stays within reach. A Hyper key (all of ⌃⌥⇧⌘, e.g. Caps Lock remapped by Karabiner-Elements or Raycast)
 shows as ✦. The shortcut needs ⌃ or ⌘ unless it is a function key, because macOS 15 ignores global shortcuts
 built from ⌥ and ⇧ alone. Changes apply at once and are kept in the
@@ -53,31 +55,18 @@ app's user defaults (`defaults read com.torz.aibar`).
 
 ## How the data is fetched
 
-If T3 Code is installed, AI Bar reads the usage it already keeps for each provider from
-`~/.t3/caches/<instance>.json` (or under `T3CODE_HOME`). T3 Code re-reads usage every 5 minutes while it runs, so
-for Claude and ChatGPT AI Bar takes T3 Code's reading when it is under 6 minutes old, and otherwise asks the
-provider itself as described below. That way the two apps do not both poll the same rate-limited endpoint. Every
-other provider T3 Code has usage for appears too, as soon as T3 Code reports it, showing T3 Code's last reading
-with its age. These files are T3 Code's internal cache, not a published API, so a file AI Bar cannot read counts as
-no reading.
-
-Claude Code stores its OAuth token in the login Keychain under `Claude Code-credentials`. AI Bar
-reads it with `/usr/bin/security` (the same approach other menu bar tools use, which avoids a
-Keychain prompt per app) and calls `GET https://api.anthropic.com/api/oauth/usage`. The token is
-never logged or written anywhere. If the token is missing or expired the pill shows `--%!` and the
-popover says to sign in to Claude Code.
-
-Codex keeps its ChatGPT session in `~/.codex/auth.json` (or under `CODEX_HOME`). AI Bar reads the access
-token and account id from it and calls `GET https://chatgpt.com/backend-api/wham/usage`, the endpoint
-behind Codex's own usage display. It only works when Codex is signed in with a ChatGPT plan, not an API
-key, and when Codex keeps its credentials in that file rather than the Keychain. Renewing the token is
-left to Codex, as it is to Claude Code.
+T3 Code keeps a status file per provider instance in `~/.t3/caches/<instance>.json` (or under `T3CODE_HOME`),
+with the rate-limit windows it last saw. It fills them from its own probes, every 5 minutes while it runs, and
+from its sessions. AI Bar only reads those files: it holds no tokens and calls no provider. A provider appears as
+soon as T3 Code reports usage for it, and each reading is dated by when T3 Code took it, so when T3 Code is closed
+the popover's "Updated … ago" shows how old the numbers are. The files are T3 Code's internal cache, not a
+published API, so a file AI Bar cannot read counts as no reading.
 
 ## Requirements
 
 - macOS 14 or newer
 - Xcode 16 or newer (Swift 6 toolchain)
-- Claude Code or Codex installed and signed in, for the providers you switch on
+- T3 Code, signed in to the providers you want to see
 
 ## Install or update
 
@@ -99,16 +88,10 @@ make app     # bundle dist/AI Bar.app
 make run     # build and launch the app bundle
 ```
 
-To run the live end-to-end tests against your own accounts:
-
-```
-AIBAR_LIVE_TESTS=1 swift test --filter UsageLive
-```
-
 ## Project layout
 
 ```
-Sources/AIBarCore   Foundation-only library: model, providers, forecasting, text, badge and bar
+Sources/AIBarCore   Foundation-only library: model, T3 Code reading, forecasting, text, badge and bar
                     geometry. Everything here is unit-tested without AppKit.
 Sources/AIBar       The menu bar app: status item, badge rendering, popover, polling controller.
 Tests/AIBarCoreTests
@@ -118,8 +101,5 @@ tickets/            The design notes each part was built from, in dependency ord
 
 ## Adding a provider
 
-Implement `UsageProvider` in `AIBarCore` (an id, a display name, and `fetchUsage()` returning a
-`UsageSnapshot` with one `UsageWindow` per limit), then add it to the provider list in
-`AppDelegate`. Windows of kind `.fiveHour`, `.weekly` and `.weeklyModel` get forecasts automatically.
-Settings lists the provider by itself. Give it a logo in `ProviderMark` to tell its reading apart in the
-menu bar; the badge has room for two stacked readings, so a third provider needs a new layout.
+There is nothing to add here: a provider shows up once T3 Code reports usage for it. Windows of 5 hours and of a
+week get forecasts. To give it a logo instead of its initial, add its T3 Code driver to `ProviderMark`.

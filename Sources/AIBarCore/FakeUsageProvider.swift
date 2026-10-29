@@ -4,6 +4,7 @@ import Foundation
 /// network; the delay exercises loading states.
 public struct FakeUsageProvider: UsageProvider {
     public let displayName: String
+    public let driver = "fake"
     public let snapshot: UsageSnapshot
     public let delay: Duration
 

@@ -2,16 +2,15 @@ import Foundation
 
 /// The providers the app shows.
 public enum UsageProviders {
-    /// Claude and ChatGPT, read through T3 Code when it has them, followed by every other provider T3 Code has usage
-    /// for. Called on every refresh, so a provider set up in T3 Code appears without relaunching AI Bar.
+    /// Every provider T3 Code has usage for, its built-in Claude and Codex first. Called on every refresh, so a
+    /// provider set up in T3 Code appears without relaunching the app.
     public static func all(t3Code cache: T3CodeProviderCache = T3CodeProviderCache()) -> [any UsageProvider] {
-        let readDirectly: Set = [T3CodeProviderInstance.defaultClaudeID, T3CodeProviderInstance.defaultCodexID]
-        let onlyInT3Code = cache.instancesWithUsage().filter { !readDirectly.contains($0.id) }
-        return [
-            T3CodeFirstUsageProvider(instanceID: T3CodeProviderInstance.defaultClaudeID, cache: cache,
-                                     direct: ClaudeUsageProvider(), naming: { $0.namedLikeClaudeEndpoint() }),
-            T3CodeFirstUsageProvider(instanceID: T3CodeProviderInstance.defaultCodexID, cache: cache,
-                                     direct: ChatGPTUsageProvider(), naming: { $0.namedLikeChatGPTEndpoint() }),
-        ] + onlyInT3Code.map { T3CodeUsageProvider(instance: $0, cache: cache) }
+        func rank(_ instance: T3CodeProviderInstance) -> Int {
+            T3CodeProviderInstance.builtInIDs.firstIndex(of: instance.id) ?? T3CodeProviderInstance.builtInIDs.count
+        }
+        // Stable, so the instances after the built-in ones keep the cache's order by id.
+        return cache.instancesWithUsage().enumerated()
+            .sorted { (rank($0.element), $0.offset) < (rank($1.element), $1.offset) }
+            .map { T3CodeUsageProvider(instance: $0.element, cache: cache) }
     }
 }

@@ -33,6 +33,7 @@ public enum UsageText {
 
     /// Shown where usage would be, when the user has turned every provider off.
     public static let noProviders = "Every provider is turned off. Turn one on in Settings."
+    public static let noT3Code = "T3 Code isn't reporting any usage. Install T3 Code, or open it and sign in to a provider."
 
     /// The tooltip of a badge no provider is shown in.
     public static let emptyBadge = "AI Bar: no provider is shown in the menu bar"

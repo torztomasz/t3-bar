@@ -62,57 +62,9 @@ import Testing
     }
 }
 
-// Method: put a T3 Code reading of a given age in front of a stand-in for the provider's own endpoint, and check
-// which of the two the snapshot came from.
-@Suite struct T3CodeFirstSource {
-    @Test func aFreshReadingIsUsedUnderTheEndpointsNames() async throws {
-        let cache = try T3CodeFixtures.cache(["claudeAgent": T3CodeFixtures.claude(checkedAt: minuteAgo)])
-        defer { T3CodeFixtures.remove(cache) }
-        let provider = T3CodeFirstUsageProvider(instanceID: "claudeAgent", cache: cache, direct: failingClaude,
-                                                naming: { $0.namedLikeClaudeEndpoint() })
-
-        let snapshot = try await provider.fetchUsage()
-
-        #expect(snapshot.provider == ClaudeUsageProvider.providerID)
-        #expect(snapshot.fetchedAt == minuteAgo)
-        #expect(snapshot.windows.map(\.id) == ["session", "weekly_all", "weekly_scoped:Fable"])
-        #expect(snapshot.primaryWindow?.percentUsed == 6)
-    }
-
-    @Test func chatGPTWindowsAreNamedByLengthAsTheEndpointNamesThem() async throws {
-        let cache = try T3CodeFixtures.cache(["codex": T3CodeFixtures.codex(checkedAt: minuteAgo)])
-        defer { T3CodeFixtures.remove(cache) }
-        let provider = T3CodeFirstUsageProvider(instanceID: "codex", cache: cache, direct: failingClaude,
-                                                naming: { $0.namedLikeChatGPTEndpoint() })
-
-        #expect(try await provider.fetchUsage().windows.map(\.id) == ["weekly"])
-    }
-
-    // Seven minutes is past T3 Code's 5-minute refresh and the minute of slack: T3 Code has paused or quit.
-    @Test(arguments: [7 * 60, 3 * 86_400] as [TimeInterval])
-    func aStaleReadingDefersToTheEndpoint(age: TimeInterval) async throws {
-        let cache = try T3CodeFixtures.cache(["claudeAgent": T3CodeFixtures.claude(checkedAt: now - age)])
-        defer { T3CodeFixtures.remove(cache) }
-        let direct = FakeUsageProvider(snapshot: .sample(fetchedAt: now))
-        let provider = T3CodeFirstUsageProvider(instanceID: "claudeAgent", cache: cache, direct: direct,
-                                                naming: { $0 })
-
-        #expect(try await provider.fetchUsage() == .sample(fetchedAt: now))
-    }
-
-    @Test func withoutT3CodeTheEndpointIsAsked() async throws {
-        let cache = T3CodeProviderCache(directory: URL(filePath: "/nonexistent/AIBarCoreTests"))
-        let provider = T3CodeFirstUsageProvider(instanceID: "claudeAgent", cache: cache,
-                                                direct: FakeUsageProvider(snapshot: .sample(fetchedAt: now)),
-                                                naming: { $0 })
-
-        #expect(try await provider.fetchUsage() == .sample(fetchedAt: now))
-    }
-}
-
 // Method: build the app's provider list from a caches directory, as each refresh does.
 @Suite struct ProvidersFoundInT3Code {
-    @Test func everyOtherProviderT3CodeHasUsageForFollowsClaudeAndChatGPT() throws {
+    @Test func everyProviderWithUsageIsShownTheBuiltInOnesFirst() throws {
         let cache = try T3CodeFixtures.cache([
             "claudeAgent": T3CodeFixtures.claude(checkedAt: minuteAgo),
             "codex": T3CodeFixtures.codex(checkedAt: minuteAgo),
@@ -123,19 +75,20 @@ import Testing
 
         let providers = UsageProviders.all(t3Code: cache)
 
-        #expect(providers.map(\.id.rawValue) == ["claude", "chatgpt", "t3code:antigravity"])
-        #expect(providers.map(\.displayName) == ["Claude", "ChatGPT", "Antigravity"])
+        #expect(providers.map(\.id.rawValue) == ["claudeAgent", "codex", "antigravity"])
+        #expect(providers.map(\.displayName) == ["Claude", "Codex", "Antigravity"])
+        #expect(providers.map(\.driver) == ["claudeAgent", "codex", "antigravity"])
         #expect(providers.map(\.defaultPlacement) == [.menuBar, .menuBar, .popoverOnly])
     }
 
-    @Test func withoutT3CodeOnlyClaudeAndChatGPTAreShown() {
+    @Test func withoutT3CodeThereAreNoProviders() {
         let cache = T3CodeProviderCache(directory: URL(filePath: "/nonexistent/AIBarCoreTests"))
 
-        #expect(UsageProviders.all(t3Code: cache).map(\.id.rawValue) == ["claude", "chatgpt"])
+        #expect(UsageProviders.all(t3Code: cache).isEmpty)
     }
 
-    // T3 Code is the only source for these, so an old reading is still the best there is; its date says how old.
-    @Test func aProviderOnlyInT3CodeShowsItsLastReadingHoweverOld() async throws {
+    // T3 Code is the only source, so an old reading is still the best there is; its date says how old.
+    @Test func aProviderShowsT3CodesLastReadingHoweverOld() async throws {
         let dayAgo = now - 86_400
         let cache = try T3CodeFixtures.cache(["antigravity": T3CodeFixtures.antigravity(checkedAt: dayAgo)])
         defer { T3CodeFixtures.remove(cache) }
@@ -143,7 +96,7 @@ import Testing
 
         let snapshot = try await T3CodeUsageProvider(instance: instance, cache: cache).fetchUsage()
 
-        #expect(snapshot.provider == ProviderID("t3code:antigravity"))
+        #expect(snapshot.provider == ProviderID("antigravity"))
         #expect(snapshot.fetchedAt == dayAgo)
     }
 
@@ -154,19 +107,6 @@ import Testing
         try FileManager.default.removeItem(at: cache.directory.appending(path: "antigravity.json"))
 
         await #expect(throws: T3CodeUsageError.self) { try await provider.fetchUsage() }
-    }
-}
-
-/// Stands in for an endpoint that must not be reached.
-private let failingClaude = ClaudeUsageProvider(credentials: NoCredentials(), transport: UnreachableTransport())
-
-private struct NoCredentials: CredentialSource {
-    func accessToken() async throws -> String { throw ClaudeUsageError.notLoggedIn }
-}
-
-private struct UnreachableTransport: HTTPTransport {
-    func get(_ url: URL, headers: [String: String]) async throws -> (body: Data, status: Int) {
-        throw URLError(.notConnectedToInternet)
     }
 }
 

@@ -163,6 +163,7 @@ final class UsageController: ObservableObject {
 struct ProviderState: Identifiable {
     let id: ProviderID
     let displayName: String
+    let driver: String
     let defaultPlacement: ProviderPlacement
     /// The last successful fetch; kept through failures.
     var snapshot: UsageSnapshot?
@@ -175,6 +176,7 @@ struct ProviderState: Identifiable {
     init(provider: any UsageProvider) {
         id = provider.id
         displayName = provider.displayName
+        driver = provider.driver
         defaultPlacement = provider.defaultPlacement
     }
 

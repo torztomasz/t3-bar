@@ -1,5 +1,0 @@
-/// Real `GET /backend-api/wham/usage` response captured 2026-09-29, with account-specific text sanitized.
-/// Kept verbatim, fields the app ignores included, so decoding is tested against what the server actually sends.
-let realChatGPTUsageResponse = #"""
-{"user_id":"user-sanitized","account_id":"00000000-0000-0000-0000-000000000000","email":"someone@example.com","plan_type":"team","rate_limit":{"allowed":true,"limit_reached":false,"primary_window":{"used_percent":0,"limit_window_seconds":18000,"reset_after_seconds":17484,"reset_at":1790703140},"secondary_window":{"used_percent":21,"limit_window_seconds":604800,"reset_after_seconds":335219,"reset_at":1791020875}},"code_review_rate_limit":null,"additional_rate_limits":null,"model_usage":{"gpt-6-astra":{"available":true,"available_at":null,"credits_would_enable":false}},"credits":{"has_credits":false,"unlimited":false,"overage_limit_reached":false,"balance":null,"approx_local_messages":null,"approx_cloud_messages":null},"spend_control":{"reached":false,"individual_limit":null},"rate_limit_reached_type":null,"promo":null,"rate_limit_reset_credits":{"available_count":3,"applicable_available_count":0}}
-"""#

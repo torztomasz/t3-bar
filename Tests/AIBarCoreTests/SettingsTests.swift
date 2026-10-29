@@ -49,7 +49,7 @@ import Testing
 }
 
 // Method: place providers through `place` and ask which the badge shows, listing them in the app's provider order:
-// Claude, ChatGPT, then T3 Code's.
+// T3 Code's built-in Claude and Codex, then the rest.
 @Suite struct MenuBarCapacity {
     @Test func theBadgeShowsEveryProviderPlacedThereWhileTheyFit() {
         var settings = AppSettings()
@@ -59,7 +59,7 @@ import Testing
         #expect(settings.menuBarProviders(among: appProviders) == [claude, antigravity])
     }
 
-    // E.g. Antigravity was placed in the menu bar, dropped out of T3 Code while Claude and ChatGPT filled it, and
+    // E.g. Antigravity was placed in the menu bar, dropped out of T3 Code while Claude and Codex filled it, and
     // came back.
     @Test func aProviderPlacedThereAfterItFilledUpIsLeftOut() {
         var settings = AppSettings()
@@ -176,28 +176,6 @@ import Testing
     }
 }
 
-// Method: write the badge window the way the app did while Claude was its only provider, a plain string under
-// `badgeWindowID`, then open a store as the updated app would on its first launch.
-@MainActor @Suite struct SettingsFromBeforeASecondProvider {
-    @Test func theStoredBadgeWindowBecomesClaudes() {
-        withIsolatedDefaults { defaults in
-            defaults.set("weekly_all", forKey: "badgeWindowID")
-
-            #expect(SettingsStore(defaults: defaults).settings.badgeWindowIDs == [claude: "weekly_all"])
-        }
-    }
-
-    // Otherwise the old choice would come back as soon as Claude's is cleared.
-    @Test func theOldChoiceIsNotReadAgainOnceSettingsAreSaved() {
-        withIsolatedDefaults { defaults in
-            defaults.set("weekly_all", forKey: "badgeWindowID")
-            SettingsStore(defaults: defaults).update { $0.badgeWindowIDs[claude] = nil }
-
-            #expect(SettingsStore(defaults: defaults).settings.badgeWindowIDs.isEmpty)
-        }
-    }
-}
-
 // Method: write raw values under the store's keys, as a hand edit with `defaults write` or another app version would,
 // then open a store and check it reads the defaults instead of the junk.
 @MainActor @Suite struct SettingsFromBadStoredValues {
@@ -211,7 +189,7 @@ import Testing
         }
     }
 
-    @Test(arguments: ["weekly_all", 42, ["claude": 42]] as [any Sendable])
+    @Test(arguments: ["weekly_all", 42, ["claudeAgent": 42]] as [any Sendable])
     func unreadableBadgeWindowsFallBackToThePrimaryWindows(stored: any Sendable) {
         withIsolatedDefaults { defaults in
             defaults.set(stored, forKey: SettingsStore.Key.badgeWindowIDs)
@@ -220,7 +198,7 @@ import Testing
         }
     }
 
-    @Test(arguments: ["off", 42, ["chatgpt": 42], ["chatgpt": "sidebar"]] as [any Sendable])
+    @Test(arguments: ["off", 42, ["codex": 42], ["codex": "sidebar"]] as [any Sendable])
     func unreadablePlacementsLeaveEveryProviderInTheMenuBar(stored: any Sendable) {
         withIsolatedDefaults { defaults in
             defaults.set(stored, forKey: SettingsStore.Key.providerPlacements)
@@ -232,7 +210,7 @@ import Testing
     // One entry from a future version must not cost the entries this version understands.
     @Test func anUnknownPlacementDoesNotHideTheKnownOnes() {
         withIsolatedDefaults { defaults in
-            defaults.set(["chatgpt": "sidebar", "claude": "off"], forKey: SettingsStore.Key.providerPlacements)
+            defaults.set(["codex": "sidebar", "claudeAgent": "off"], forKey: SettingsStore.Key.providerPlacements)
 
             #expect(SettingsStore(defaults: defaults).settings == AppSettings(providerPlacements: [claude: .off]))
         }
@@ -275,12 +253,12 @@ import Testing
     }
 }
 
-private let claude = ProviderID("claude")
-private let antigravity = ProviderID("t3code:antigravity")
+private let claude = ProviderID("claudeAgent")
+private let antigravity = ProviderID("antigravity")
 private let appProviders: [(id: ProviderID, defaultPlacement: ProviderPlacement)] = [
     (claude, .menuBar), (chatGPT, .menuBar), (antigravity, .popoverOnly),
 ]
-private let chatGPT = ProviderID("chatgpt")
+private let chatGPT = ProviderID("codex")
 
 @MainActor private func withIsolatedDefaults(_ body: (UserDefaults) -> Void) {
     let suiteName = "AIBarCoreTests.\(UUID().uuidString)"

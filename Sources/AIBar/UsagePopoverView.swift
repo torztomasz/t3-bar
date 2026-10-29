@@ -27,7 +27,7 @@ struct UsagePopoverView: View {
                         .padding(.vertical, 8)
                 }
                 if controller.states.isEmpty {
-                    Text(UsageText.noProviders)
+                    Text(controller.providers.isEmpty ? UsageText.noT3Code : UsageText.noProviders)
                         .foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
                         .padding(.horizontal, MenuMetrics.contentInset)

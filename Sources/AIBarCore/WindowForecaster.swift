@@ -1,5 +1,4 @@
 import Foundation
-import os
 
 /// Forecasts every window of a snapshot from that window's own history, so the 5-hour and the weekly limits each
 /// get a pace of their own. Histories live one file per (provider, window) under `directory`, so a restart resumes
@@ -42,26 +41,9 @@ public final class WindowForecaster {
     private func store(for window: UsageWindow, of provider: ProviderID, length: TimeInterval) -> SampleStore {
         let fileURL = file(named: "samples-\(fileSafe(provider.rawValue))-\(fileSafe(window.id)).json")
         if let store = stores[fileURL] { return store }
-        if window.kind == .fiveHour {
-            adoptSingleWindowHistory(of: provider, into: fileURL)
-        }
         let store = SampleStore(fileURL: fileURL, windowLength: length)
         stores[fileURL] = store
         return store
-    }
-
-    /// Before each window had a file, the 5-hour history lived in `samples-<provider>.json`. Moving it over keeps an
-    /// upgrade from silently restarting the forecast; a failed move is logged and only costs that history.
-    private func adoptSingleWindowHistory(of provider: ProviderID, into fileURL: URL) {
-        let oldURL = file(named: "samples-\(provider.rawValue).json")
-        let fileManager = FileManager.default
-        guard fileManager.fileExists(atPath: oldURL.path(percentEncoded: false)),
-              !fileManager.fileExists(atPath: fileURL.path(percentEncoded: false)) else { return }
-        do {
-            try fileManager.moveItem(at: oldURL, to: fileURL)
-        } catch {
-            logger.error("Could not move 5-hour usage history to its per-window file: \(error)")
-        }
     }
 
     private func file(named name: String) -> URL {
@@ -83,5 +65,3 @@ private func isFileSafe(_ byte: UInt8) -> Bool {
     default: false
     }
 }
-
-private let logger = Logger(subsystem: "com.torz.aibar", category: "WindowForecaster")

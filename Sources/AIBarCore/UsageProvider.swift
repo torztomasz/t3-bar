@@ -5,6 +5,9 @@ import Foundation
 public protocol UsageProvider: Sendable {
     var id: ProviderID { get }
     var displayName: String { get }
+    /// Which provider it is underneath, as T3 Code names it (e.g. `claudeAgent`, `codex`); picks its logo, so a
+    /// second Codex account gets the same one.
+    var driver: String { get }
     /// Where the provider appears until the user places it.
     var defaultPlacement: ProviderPlacement { get }
     func fetchUsage() async throws -> UsageSnapshot

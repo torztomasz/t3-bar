@@ -55,7 +55,7 @@ final class StatusItemController: NSObject {
             BadgeReading(state: state, window: state.badgeWindow(for: settingsStore.settings.badgeWindowIDs[state.id]))
         }
         let height = BadgeSize.height(menuBarHeights: NSScreen.screens.map(\.menuBarHeight))
-        let rows = readings.map { BadgeRenderer.Row(mark: ProviderMark.image(for: $0.state.id, named: $0.state.displayName),
+        let rows = readings.map { BadgeRenderer.Row(mark: ProviderMark.image(forDriver: $0.state.driver, named: $0.state.displayName),
                                                         text: $0.text) }
         statusItem.button?.image = rows.isEmpty
             ? BadgeRenderer.placeholder(height: height)
