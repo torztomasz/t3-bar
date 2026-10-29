@@ -25,6 +25,34 @@ public struct T3CodeUsageProvider: UsageProvider {
     }
 }
 
+/// One account in a cliproxy hub connected in T3 Code. Starts in the popover: a hub pools several accounts, more
+/// than the menu bar has room for.
+public struct T3CodeHubAccountProvider: UsageProvider {
+    public let id: ProviderID
+    public let displayName: String
+    public let driver: String
+    public let defaultPlacement = ProviderPlacement.popoverOnly
+    private let hubID: String
+    private let accountID: String
+    private let hubs: T3CodeHubs
+
+    /// Named by its email, which is how a pool's accounts are told apart; the hub's own id is the fallback.
+    public init(account: T3CodeHubAccount, in hub: T3CodeHub, hubs: T3CodeHubs) {
+        id = ProviderID("cliproxy:\(hub.id):\(account.id)")
+        displayName = account.email ?? account.id
+        driver = account.driver
+        hubID = hub.id
+        accountID = account.id
+        self.hubs = hubs
+    }
+
+    public func fetchUsage() async throws -> UsageSnapshot {
+        let account = hubs.hubs.first { $0.id == hubID }?.accounts.first { $0.id == accountID }
+        guard let usage = account?.usage else { throw T3CodeUsageError.noReading(displayName) }
+        return UsageSnapshot(provider: id, fetchedAt: usage.checkedAt, windows: usage.windows)
+    }
+}
+
 public enum T3CodeUsageError: Error, LocalizedError {
     /// T3 Code has stopped reporting the instance: it was turned off, signed out, or removed since the last refresh.
     case noReading(String)

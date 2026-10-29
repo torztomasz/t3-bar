@@ -55,9 +55,9 @@ import Testing
     }
 
     @Test func theCachesLiveInT3CodeHome() {
-        #expect(T3CodeProviderCache(environment: ["T3CODE_HOME": "/tmp/t3home"]).directory.path(percentEncoded: false)
-                == "/tmp/t3home/caches/")
-        #expect(T3CodeProviderCache(environment: [:]).directory
+        let home = T3CodeHome(environment: ["T3CODE_HOME": "/tmp/t3home"])
+        #expect(T3CodeProviderCache(home: home).directory.path(percentEncoded: false) == "/tmp/t3home/caches/")
+        #expect(T3CodeProviderCache(home: T3CodeHome(environment: [:])).directory
                 == FileManager.default.homeDirectoryForCurrentUser.appending(path: ".t3/caches/"))
     }
 }
@@ -73,7 +73,7 @@ import Testing
         ])
         defer { T3CodeFixtures.remove(cache) }
 
-        let providers = UsageProviders.all(t3Code: cache)
+        let providers = UsageProviders.all(t3Code: cache, hubs: T3CodeHubs())
 
         #expect(providers.map(\.id.rawValue) == ["claudeAgent", "codex", "antigravity"])
         #expect(providers.map(\.displayName) == ["Claude", "Codex", "Antigravity"])
@@ -84,7 +84,7 @@ import Testing
     @Test func withoutT3CodeThereAreNoProviders() {
         let cache = T3CodeProviderCache(directory: URL(filePath: "/nonexistent/T3BarCoreTests"))
 
-        #expect(UsageProviders.all(t3Code: cache).isEmpty)
+        #expect(UsageProviders.all(t3Code: cache, hubs: T3CodeHubs()).isEmpty)
     }
 
     // T3 Code is the only source, so an old reading is still the best there is; its date says how old.

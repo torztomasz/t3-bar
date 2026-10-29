@@ -8,7 +8,8 @@ import os
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private let settingsStore = SettingsStore(defaults: .standard)
-    private lazy var usage = UsageController(discoverProviders: { UsageProviders.all() },
+    private let hubs = T3CodeHubs()
+    private lazy var usage = UsageController(discoverProviders: { [hubs] in UsageProviders.all(hubs: hubs) },
                                              settingsStore: settingsStore)
     private lazy var hotKey = PopoverHotKey(settingsStore: settingsStore)
     private lazy var settingsWindow = SettingsWindowController(
@@ -38,6 +39,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         statusItemController = statusItem
         usage.start()
+        // Hub readings arrive as T3 Code takes them, so they are shown then rather than at the next poll.
+        hubs.start { [weak usage] in
+            Task { @MainActor in await usage?.refresh() }
+        }
     }
 
     private func openSettings() {

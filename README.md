@@ -3,9 +3,9 @@
 A companion menu bar app for [T3 Code](https://github.com/pingdotgg/t3code) that shows how much of your AI
 provider rate limits you have used, and whether you are on pace to run out before the window resets.
 
-It shows every provider T3 Code tracks usage for: Claude, Codex, Antigravity, a second Codex account. It reads
-the usage T3 Code already keeps, so with T3 Code installed there is nothing to log in to or set up, and without
-it there is nothing to show.
+It shows every provider T3 Code tracks usage for: Claude, Codex, Antigravity, a second Codex account, the accounts
+of a CLIProxyAPI hub. It reads the usage T3 Code already keeps, so with T3 Code installed there is nothing to log
+in to or set up, and without it there is nothing to show.
 
 <img src="docs/screenshots/popover.png" alt="The menu bar reading and the popover with Claude and ChatGPT, annotated: usage so far, projected usage at reset, how much of the window has passed, and how long you would be locked out" width="750">
 
@@ -61,6 +61,16 @@ from its sessions. T3 Bar only reads those files: it holds no tokens and calls n
 soon as T3 Code reports usage for it, and each reading is dated by when T3 Code took it, so when T3 Code is closed
 the popover's "Updated … ago" shows how old the numbers are. The files are T3 Code's internal cache, not a
 published API, so a file T3 Bar cannot read counts as no reading.
+
+A [CLIProxyAPI](https://github.com/router-for-me/CLIProxyAPI) hub connected in T3 Code
+([how](https://github.com/pingdotgg/t3code/blob/main/docs/user/usage.md#connect-a-cliproxyapi-hub)) shows too, one
+provider per account in its pool, named by the account's email and starting out "Popover only". T3 Code polls the
+hub itself but keeps those readings in memory, so T3 Bar subscribes to the running T3 Code server's config stream
+for them. It mints its own token for that with T3 Code's bundled CLI (`t3 auth session issue --scope
+orchestration:read --ttl 1d --label "T3 Bar"`), keeps it in memory only, and mints a new one when T3 Code refuses
+it; the session shows as "T3 Bar" in `t3 auth session list`. Hub accounts update as soon as T3 Code reports them,
+and keep their last readings while T3 Code is closed. The stream is T3 Code's internal RPC, not a published API,
+so a T3 Code update can change it; T3 Bar then shows no hub accounts and keeps trying.
 
 ## Requirements
 

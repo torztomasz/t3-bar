@@ -13,11 +13,8 @@ public struct T3CodeProviderCache: Sendable {
         self.directory = directory
     }
 
-    /// `T3CODE_HOME` is the variable T3 Code itself honours; without it T3 Code lives in `~/.t3`.
-    public init(environment: [String: String] = ProcessInfo.processInfo.environment) {
-        let home = environment["T3CODE_HOME"].map { URL(filePath: $0, directoryHint: .isDirectory) }
-            ?? FileManager.default.homeDirectoryForCurrentUser.appending(path: ".t3", directoryHint: .isDirectory)
-        self.init(directory: home.appending(path: "caches", directoryHint: .isDirectory))
+    public init(home: T3CodeHome = T3CodeHome()) {
+        self.init(directory: home.caches)
     }
 
     /// Every instance T3 Code has turned on that has usage to show: the built-in ones first, then the rest by id, so
@@ -39,16 +36,7 @@ public struct T3CodeProviderCache: Sendable {
     }
 
     static func instance(fromStatusJSON data: Data) throws -> T3CodeProviderInstance {
-        let decoder = JSONDecoder()
-        decoder.dateDecodingStrategy = .custom { decoder in
-            let text = try decoder.singleValueContainer().decode(String.self)
-            guard let date = parseISODate(text) else {
-                throw DecodingError.dataCorrupted(.init(codingPath: decoder.codingPath,
-                                                        debugDescription: "Not an ISO-8601 date: \(text)"))
-            }
-            return date
-        }
-        return try decoder.decode(T3CodeProviderStatus.self, from: data).instance
+        try JSONDecoder.t3Code.decode(T3CodeProviderStatus.self, from: data).instance
     }
 }
 
@@ -72,13 +60,6 @@ public struct T3CodeProviderInstance: Equatable, Sendable {
     }
 }
 
-/// The windows of one instance as T3 Code last saw them.
-public struct T3CodeUsage: Equatable, Sendable {
-    /// When T3 Code took the reading; it may be long ago if T3 Code has not run since.
-    public let checkedAt: Date
-    public let windows: [UsageWindow]
-}
-
 /// The subset of T3 Code's provider status file the app reads. Optional where T3 Code's own schema is, so a field
 /// T3 Code leaves out costs that field, not the instance.
 private struct T3CodeProviderStatus: Decodable {
@@ -86,54 +67,10 @@ private struct T3CodeProviderStatus: Decodable {
     let driver: String
     let displayName: String?
     let enabled: Bool?
-    let usageLimits: UsageLimits?
-
-    struct UsageLimits: Decodable {
-        let checkedAt: Date
-        let windows: [Window]
-    }
-
-    struct Window: Decodable {
-        let id: String
-        let label: String
-        let usedPercent: Double
-        let resetsAt: Date?
-        let windowDurationMins: Int?
-    }
+    let usageLimits: T3CodeUsageLimits?
 
     var instance: T3CodeProviderInstance {
-        let windows = usageLimits?.windows.map(\.window) ?? []
-        return T3CodeProviderInstance(
-            id: instanceId, driver: driver, displayName: displayName ?? instanceId, isEnabled: enabled ?? false,
-            usage: usageLimits.flatMap { windows.isEmpty ? nil : T3CodeUsage(checkedAt: $0.checkedAt, windows: windows) })
+        T3CodeProviderInstance(id: instanceId, driver: driver, displayName: displayName ?? instanceId,
+                               isEnabled: enabled ?? false, usage: usageLimits?.usage)
     }
-}
-
-extension T3CodeProviderStatus.Window {
-    /// Told apart by length rather than by T3 Code's `kind`, because the length is what the forecast needs and T3
-    /// Code labels a weekly cap on one model `Weekly · <model>`.
-    var window: UsageWindow {
-        let kind: UsageWindow.Kind = switch windowDurationMins.map({ TimeInterval($0 * 60) }) {
-        case RollingWindow.fiveHours: .fiveHour
-        case RollingWindow.week:
-            label.hasPrefix(Self.modelLabelPrefix)
-                ? .weeklyModel(name: String(label.dropFirst(Self.modelLabelPrefix.count))) : .weekly
-        default: .other
-        }
-        // T3 Code calls the 5-hour window "Session"; the rest of the app calls it by its length.
-        return UsageWindow(id: id, kind: kind, title: kind == .fiveHour ? "5-hour" : label,
-                           percentUsed: usedPercent, resetsAt: resetsAt)
-    }
-
-    private static let modelLabelPrefix = "Weekly · "
-}
-
-/// T3 Code writes millisecond fractions (`2026-10-29T15:50:00.454Z`), but a whole-second timestamp is equally valid
-/// ISO-8601, so both are accepted rather than dropping the date.
-private func parseISODate(_ text: String) -> Date? {
-    let formatter = ISO8601DateFormatter()
-    formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-    if let date = formatter.date(from: text) { return date }
-    formatter.formatOptions = [.withInternetDateTime]
-    return formatter.date(from: text)
 }
