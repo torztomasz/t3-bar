@@ -100,7 +100,7 @@ struct SettingsView: View {
         )) {
             Section("Menu bar and popover") {
                 if windows.isEmpty {
-                    Text("5-hour").tag(ProviderChoice.menuBar(windowID: shownWindowID)).disabled(hasNoRoom)
+                    Text("Default window").tag(ProviderChoice.menuBar(windowID: shownWindowID)).disabled(hasNoRoom)
                 }
                 ForEach(windows) { window in
                     Text(window.title).tag(ProviderChoice.menuBar(windowID: window.id)).disabled(hasNoRoom)

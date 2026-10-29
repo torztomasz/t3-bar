@@ -102,7 +102,15 @@ final class UsageController: ObservableObject {
     }
 
     /// Called at the start of a refresh, which then fetches whatever provider this adds.
+    ///
+    /// A provider T3 Code stops reporting can free a place in the menu bar, so first the providers the badge leaves
+    /// out are stored where Settings shows them, in the popover, rather than taking that place unasked.
     private func rediscoverProviders() {
+        var settled = settingsStore.settings
+        settled.moveMenuBarOverflowToPopover(among: providers.map { ($0.id, $0.defaultPlacement) })
+        if settled != settingsStore.settings {
+            settingsStore.update { $0 = settled }
+        }
         let discovered = discoverProviders()
         guard discovered.map(\.id) != providers.map(\.id) else { return }
         providers = discovered
