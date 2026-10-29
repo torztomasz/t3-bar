@@ -53,13 +53,36 @@ public struct T3CodeHubAccountProvider: UsageProvider {
     }
 }
 
+/// A hub T3 Code could not read, shown under its label with T3 Code's reason, so a pool that went missing from the
+/// popover says why instead of vanishing.
+public struct T3CodeUnreadHubProvider: UsageProvider {
+    public let id: ProviderID
+    public let displayName: String
+    public let driver = "cliproxy"
+    public let defaultPlacement = ProviderPlacement.popoverOnly
+    private let reason: String
+
+    public init(hub: T3CodeHub, reason: String) {
+        id = ProviderID("cliproxy:\(hub.id)")
+        displayName = hub.label
+        self.reason = reason
+    }
+
+    public func fetchUsage() async throws -> UsageSnapshot {
+        throw T3CodeUsageError.unreadHub(reason)
+    }
+}
+
 public enum T3CodeUsageError: Error, LocalizedError {
     /// T3 Code has stopped reporting the instance: it was turned off, signed out, or removed since the last refresh.
     case noReading(String)
+    /// T3 Code reached for the hub's accounts and failed; the reason is T3 Code's.
+    case unreadHub(String)
 
     public var errorDescription: String? {
         switch self {
         case .noReading(let name): "T3 Code has no usage for \(name) right now. Open T3 Code to see it."
+        case .unreadHub(let reason): "T3 Code can't read this hub's accounts: \(reason)"
         }
     }
 }

@@ -70,7 +70,9 @@ struct T3CodeServerMessage {
     private struct Source: Decodable {
         let id: String
         let label: String
-        let accounts: [Account]
+        /// Decoded one by one, so an account shaped in a way the app does not know costs that account, not the hub.
+        let accounts: [Lossy<Account>]
+        let error: String?
 
         struct Account: Decodable {
             let id: String
@@ -80,9 +82,17 @@ struct T3CodeServerMessage {
         }
 
         var hub: T3CodeHub {
-            T3CodeHub(id: id, label: label, accounts: accounts.map {
+            T3CodeHub(id: id, label: label, accounts: accounts.compactMap(\.value).map {
                 T3CodeHubAccount(id: $0.id, driver: $0.driver, email: $0.email, usage: $0.usageLimits?.usage)
-            })
+            }, error: error)
+        }
+    }
+
+    private struct Lossy<Value: Decodable>: Decodable {
+        let value: Value?
+
+        init(from decoder: any Decoder) throws {
+            value = try? Value(from: decoder)
         }
     }
 }

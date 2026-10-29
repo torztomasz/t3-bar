@@ -35,6 +35,16 @@ import Testing
         #expect(frame.hubs == [])
     }
 
+    @Test func anAccountTheAppCannotReadIsSkippedNotTheHub() {
+        let frame = T3CodeServerMessage(.string(chunk(#"""
+            {"type":"usageLimitSourcesUpdated","payload":{"sources":[{"id":"home","label":"hub.local","accounts":[
+              {"id":"odd.json","driver":"codex","usageLimits":{"checkedAt":"yesterday","windows":[]}},
+              {"id":"fine.json","driver":"codex"}]}]}}
+            """#)))
+
+        #expect(frame.hubs?.first?.accounts.map(\.id) == ["fine.json"])
+    }
+
     @Test func theLastHubEventInAChunkWins() {
         let frame = T3CodeServerMessage(.string(chunk(
             #"{"type":"usageLimitSourcesUpdated","payload":{"sources":[]}}"#, hubEvent)))
@@ -106,8 +116,24 @@ import Testing
         let hubs = T3CodeHubs()
 
         #expect(!hubs.update([]))
-        #expect(hubs.update([T3CodeHub(id: "home", label: "hub.local", accounts: [])]))
-        #expect(!hubs.update([T3CodeHub(id: "home", label: "hub.local", accounts: [])]))
+        #expect(hubs.update([T3CodeHub(id: "home", label: "hub.local", accounts: [], error: nil)]))
+        #expect(!hubs.update([T3CodeHub(id: "home", label: "hub.local", accounts: [], error: nil)]))
+    }
+
+    // As T3 Code reported a hub whose management key the hub refused.
+    @Test func aHubT3CodeCannotReadShowsWhy() async throws {
+        let hubs = T3CodeHubs()
+        _ = hubs.update(try #require(T3CodeServerMessage(.string(chunk(#"""
+            {"type":"usageLimitSourcesUpdated","payload":{"sources":[{"id":"cliproxy-vps-8317","kind":"cliproxy",
+             "label":"Codex (pool)","checkedAt":"2026-10-29T12:15:49.140Z","accounts":[],
+             "error":"The hub answered with HTTP 401."}]}}
+            """#))).hubs))
+        let provider = try #require(UsageProviders.all(t3Code: emptyCache, hubs: hubs).first)
+
+        #expect(provider.displayName == "Codex (pool)")
+        #expect(provider.defaultPlacement == .popoverOnly)
+        let error = await #expect(throws: T3CodeUsageError.self) { try await provider.fetchUsage() }
+        #expect(error?.errorDescription == "T3 Code can't read this hub's accounts: The hub answered with HTTP 401.")
     }
 }
 

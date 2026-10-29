@@ -8,8 +8,12 @@ public enum UsageProviders {
         -> [any UsageProvider] {
         let instances: [any UsageProvider] = cache.instancesWithUsage()
             .map { T3CodeUsageProvider(instance: $0, cache: cache) }
-        let accounts: [any UsageProvider] = hubs.hubs.flatMap { hub in
-            hub.accounts.filter { $0.usage != nil }.map { T3CodeHubAccountProvider(account: $0, in: hub, hubs: hubs) }
+        let accounts: [any UsageProvider] = hubs.hubs.flatMap { hub -> [any UsageProvider] in
+            if let error = hub.error, hub.accounts.isEmpty {
+                return [T3CodeUnreadHubProvider(hub: hub, reason: error)]
+            }
+            return hub.accounts.filter { $0.usage != nil }
+                .map { T3CodeHubAccountProvider(account: $0, in: hub, hubs: hubs) }
         }
         return instances + accounts
     }

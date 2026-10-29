@@ -128,8 +128,10 @@ public struct T3CodeHub: Equatable, Sendable {
     public let id: String
     /// What T3 Code shows for it: the label the user gave it, or the hub's host.
     public let label: String
-    /// Empty when T3 Code could not read the hub; its error says why.
+    /// Empty when T3 Code could not read the hub; `error` then says why.
     public let accounts: [T3CodeHubAccount]
+    /// T3 Code's own words, e.g. "The hub answered with HTTP 401."
+    public let error: String?
 }
 
 /// One account in a hub's pool, e.g. one of several Claude subscriptions.
