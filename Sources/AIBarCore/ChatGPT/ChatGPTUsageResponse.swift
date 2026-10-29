@@ -37,6 +37,23 @@ extension ChatGPTUsageResponse.Window {
     }
 }
 
+extension UsageWindow {
+    /// This window under the id and title the ChatGPT endpoint gives it, for a reading of the same limits taken
+    /// elsewhere (T3 Code), so it continues the endpoint's history and badge choice.
+    func namedLikeChatGPTEndpoint() -> UsageWindow {
+        // The endpoint names a window by its length alone, which would lose a per-model window's model.
+        let length: TimeInterval
+        switch kind {
+        case .fiveHour: length = RollingWindow.fiveHours
+        case .weekly: length = RollingWindow.week
+        case .weeklyModel, .other: return self
+        }
+        let identity = WindowIdentity(length: length)
+        return UsageWindow(id: identity.id, kind: identity.kind, title: identity.title, percentUsed: percentUsed,
+                           resetsAt: resetsAt)
+    }
+}
+
 /// How the app names a ChatGPT window. Named after its length rather than its slot in the response, so a window
 /// keeps its id and history if a plan reports it in the other slot.
 private struct WindowIdentity {

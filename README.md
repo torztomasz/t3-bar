@@ -3,8 +3,9 @@
 A macOS menu bar app that shows how much of your AI provider rate limits you have used, and whether
 you are on pace to run out before the window resets.
 
-It shows Claude and ChatGPT. It reuses the sessions Claude Code and Codex already have, so there is
-nothing to log in to. More providers plug in behind the `UsageProvider` protocol.
+It shows Claude and ChatGPT, plus every other provider T3 Code tracks usage for, such as
+Antigravity or a second Codex account. It reuses what T3 Code, Claude Code and Codex already know, so there is
+nothing to log in to or set up. More providers plug in behind the `UsageProvider` protocol.
 
 <img src="docs/screenshots/popover.png" alt="The menu bar reading and the popover with Claude and ChatGPT, annotated: usage so far, projected usage at reset, how much of the window has passed, and how long you would be locked out" width="750">
 
@@ -42,13 +43,22 @@ the reset time yields the projected usage. Readings are stored per window under
 Settings… in the popover (or ⌘, while it is open) opens Settings: launch at login, how often to refresh
 (1 to 15 minutes, default 5) and an optional shortcut that opens the popover from
 any app (none by default). Each provider has one choice: which of its windows the pill shows, "Popover only", which keeps it
-out of the menu bar, or "Off", which also stops fetching it. With no provider in the menu bar the item
+out of the menu bar, or "Off", which also stops fetching it. Providers found in T3 Code start out "Popover only",
+since the pill has room for two stacked readings. With no provider in the menu bar the item
 shows a gauge icon, so the popover stays within reach. A Hyper key (all of ⌃⌥⇧⌘, e.g. Caps Lock remapped by Karabiner-Elements or Raycast)
 shows as ✦. The shortcut needs ⌃ or ⌘ unless it is a function key, because macOS 15 ignores global shortcuts
 built from ⌥ and ⇧ alone. Changes apply at once and are kept in the
 app's user defaults (`defaults read com.torz.aibar`).
 
 ## How the data is fetched
+
+If T3 Code is installed, AI Bar reads the usage it already keeps for each provider from
+`~/.t3/caches/<instance>.json` (or under `T3CODE_HOME`). T3 Code re-reads usage every 5 minutes while it runs, so
+for Claude and ChatGPT AI Bar takes T3 Code's reading when it is under 6 minutes old, and otherwise asks the
+provider itself as described below. That way the two apps do not both poll the same rate-limited endpoint. Every
+other provider T3 Code has usage for appears too, as soon as T3 Code reports it, showing T3 Code's last reading
+with its age. These files are T3 Code's internal cache, not a published API, so a file AI Bar cannot read counts as
+no reading.
 
 Claude Code stores its OAuth token in the login Keychain under `Claude Code-credentials`. AI Bar
 reads it with `/usr/bin/security` (the same approach other menu bar tools use, which avoids a

@@ -5,5 +5,11 @@ import Foundation
 public protocol UsageProvider: Sendable {
     var id: ProviderID { get }
     var displayName: String { get }
+    /// Where the provider appears until the user places it.
+    var defaultPlacement: ProviderPlacement { get }
     func fetchUsage() async throws -> UsageSnapshot
+}
+
+extension UsageProvider {
+    public var defaultPlacement: ProviderPlacement { .menuBar }
 }

@@ -6,26 +6,28 @@ import AppKit
 @MainActor
 final class UsageController: ObservableObject {
     /// One entry per provider the user has turned on, in the order the badge and the popover list them.
-    @Published private(set) var states: [ProviderState] {
+    @Published private(set) var states: [ProviderState] = [] {
         didSet { onStatesChanged(states) }
     }
 
     /// For AppKit consumers (the status item) that cannot observe SwiftUI state.
     var onStatesChanged: ([ProviderState]) -> Void = { _ in }
 
-    /// Every provider the app knows, turned on or not.
-    let providers: [any UsageProvider]
+    /// Every provider the app knows, turned on or not. Worked out again on each refresh, since T3 Code can start
+    /// reporting a provider at any time.
+    @Published private(set) var providers: [any UsageProvider]
+    private let discoverProviders: @MainActor () -> [any UsageProvider]
     private let settingsStore: SettingsStore
     private let forecaster = WindowForecaster.inApplicationSupport()
     private var pollingTask: Task<Void, Never>?
     /// The interval `pollingTask` sleeps for, to tell a changed interval from any other settings change.
     private var pollingInterval: Duration?
 
-    init(providers: [any UsageProvider], settingsStore: SettingsStore) {
-        self.providers = providers
+    init(discoverProviders: @escaping @MainActor () -> [any UsageProvider], settingsStore: SettingsStore) {
+        self.discoverProviders = discoverProviders
         self.settingsStore = settingsStore
-        states = providers.filter { settingsStore.settings.placement(of: $0.id).isFetched }
-            .map { ProviderState(id: $0.id, displayName: $0.displayName) }
+        providers = discoverProviders()
+        states = statesOfFetchedProviders()
     }
 
     /// The stalest provider's refresh time, since a single "Updated … ago" vouches for all the data shown;
@@ -70,6 +72,7 @@ final class UsageController: ObservableObject {
     /// asked twice. A failed fetch keeps the previous snapshot, so the badge shows the last known reading.
     func refresh() async {
         Log.app.notice("refreshing usage")
+        rediscoverProviders()
         let due = Set(states.filter { !$0.isRefreshing }.map(\.id))
         // Marked on a copy so observers redraw once, not once per provider.
         var marked = states
@@ -89,15 +92,27 @@ final class UsageController: ObservableObject {
 
     /// A provider turned off takes its data with it; one turned on is fetched at once rather than at the next poll.
     private func showEnabledProviders() {
-        let enabled = providers.filter { settingsStore.settings.placement(of: $0.id).isFetched }
-        guard enabled.map(\.id) != states.map(\.id) else { return }
-        let hasNewProvider = enabled.contains { provider in !states.contains { $0.id == provider.id } }
-        states = enabled.map { provider in
-            states.first { $0.id == provider.id } ?? ProviderState(id: provider.id, displayName: provider.displayName)
-        }
+        let fetched = statesOfFetchedProviders()
+        guard fetched.map(\.id) != states.map(\.id) else { return }
+        let hasNewProvider = fetched.contains { provider in !states.contains { $0.id == provider.id } }
+        states = fetched
         if hasNewProvider && pollingTask != nil {
             Task { await refresh() }
         }
+    }
+
+    /// Called at the start of a refresh, which then fetches whatever provider this adds.
+    private func rediscoverProviders() {
+        let discovered = discoverProviders()
+        guard discovered.map(\.id) != providers.map(\.id) else { return }
+        providers = discovered
+        states = statesOfFetchedProviders()
+    }
+
+    /// One per provider that is not off, keeping what is already known about each.
+    private func statesOfFetchedProviders() -> [ProviderState] {
+        providers.filter { settingsStore.settings.placement(of: $0.id, defaultingTo: $0.defaultPlacement).isFetched }
+            .map { provider in states.first { $0.id == provider.id } ?? ProviderState(provider: provider) }
     }
 
     /// Each refresh runs in a task of its own, so replacing the loop cancels only its sleep, never a fetch in flight.
@@ -140,6 +155,7 @@ final class UsageController: ObservableObject {
 struct ProviderState: Identifiable {
     let id: ProviderID
     let displayName: String
+    let defaultPlacement: ProviderPlacement
     /// The last successful fetch; kept through failures.
     var snapshot: UsageSnapshot?
     /// For the windows of `snapshot`; a window of unknown length has none.
@@ -147,6 +163,16 @@ struct ProviderState: Identifiable {
     /// Cleared by the next successful fetch.
     var lastError: (any Error)?
     var isRefreshing = false
+
+    init(provider: any UsageProvider) {
+        id = provider.id
+        displayName = provider.displayName
+        defaultPlacement = provider.defaultPlacement
+    }
+
+    func placement(in settings: AppSettings) -> ProviderPlacement {
+        settings.placement(of: id, defaultingTo: defaultPlacement)
+    }
 
     /// Derived rather than stored so it can never disagree with the snapshot it describes.
     var lastRefreshedAt: Date? { snapshot?.fetchedAt }

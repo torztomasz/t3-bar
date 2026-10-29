@@ -69,6 +69,16 @@ import Testing
         #expect(store.samples() == [UsageSample(at: start.addingTimeInterval(600), percentUsed: 30)])
     }
 
+    // Two polls that both find T3 Code's reading from 10 minutes in: one sample, not a doubled one.
+    @Test func recordingTheSameReadingTwiceKeepsOneSample() {
+        let store = SampleStore(fileURL: fileURL, windowLength: FixtureWindow.length)
+
+        store.record(.fiveHour(percent: 30, resetsAt: resetsAt), at: start.addingTimeInterval(600))
+        store.record(.fiveHour(percent: 30, resetsAt: resetsAt), at: start.addingTimeInterval(600))
+
+        #expect(store.samples() == [UsageSample(at: start.addingTimeInterval(600), percentUsed: 30)])
+    }
+
     // Ten minutes past the reported reset the provider has not caught up: the 90% describes a window that is over,
     // and if kept it could land inside the next window and inflate its pace.
     @Test func recordingAWindowPastItsResetKeepsNothing() {

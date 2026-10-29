@@ -60,6 +60,22 @@ extension ClaudeUsageResponse.Limit {
     }
 }
 
+extension UsageWindow {
+    /// This window under the id and title the Claude endpoint gives it, for a reading of the same limits taken
+    /// elsewhere (T3 Code), so it continues the endpoint's history and badge choice.
+    func namedLikeClaudeEndpoint() -> UsageWindow {
+        let identity: WindowIdentity
+        switch kind {
+        case .fiveHour: identity = .fiveHour
+        case .weekly: identity = .weekly
+        case .weeklyModel(let name): identity = .weeklyModel(name)
+        case .other: return self
+        }
+        return UsageWindow(id: identity.id, kind: identity.kind, title: identity.title, percentUsed: percentUsed,
+                           resetsAt: resetsAt)
+    }
+}
+
 /// How the app names a Claude window. Shared by `limits` and the legacy objects so a window keeps its id
 /// whichever shape the server sends.
 private struct WindowIdentity {

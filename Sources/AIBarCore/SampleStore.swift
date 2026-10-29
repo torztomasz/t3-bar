@@ -25,9 +25,13 @@ public final class SampleStore: Sendable {
 
     /// Keeps only samples inside the current window, `sample` included, so the file stays bounded. Without
     /// `resetsAt` the window start is unknown, so anything more than one window length older than `sample` goes.
+    ///
+    /// A second sample at the same time is dropped: a reading from T3 Code is dated when T3 Code took it, so two
+    /// polls between its probes bring the same one, and keeping both would weigh it double in the forecast.
     public func append(_ sample: UsageSample, resetsAt: Date?) {
         // Saving inside the lock keeps concurrent appends from overwriting the file with an older list.
         lockedSamples.withLock { samples in
+            guard !samples.contains(where: { $0.at == sample.at }) else { return }
             let windowStart = RollingWindow.start(resetsAt: resetsAt ?? sample.at, length: windowLength)
             samples.append(sample)
             samples.removeAll { $0.at < windowStart }

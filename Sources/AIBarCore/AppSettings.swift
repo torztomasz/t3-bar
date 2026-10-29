@@ -6,8 +6,8 @@ public struct AppSettings: Equatable, Sendable {
     /// The window the menu bar badge shows for each provider; a provider without an entry shows its primary window
     /// (see `UsageSnapshot.window(for:)`). Per provider because window ids are each provider's own.
     public var badgeWindowIDs: [ProviderID: String]
-    /// Where each provider's usage appears. Stored for the exceptions only: a provider without an entry is in the
-    /// menu bar, so one added by an update starts out shown.
+    /// Where each provider's usage appears, for the providers the user has placed. One without an entry appears
+    /// where it does by default (`UsageProvider.defaultPlacement`), so one added by an update starts out shown.
     public private(set) var providerPlacements: [ProviderID: ProviderPlacement]
     /// Toggles the usage popover from any app. Off by default: every global shortcut is taken from every other app,
     /// so it is the user's to claim.
@@ -22,16 +22,19 @@ public struct AppSettings: Equatable, Sendable {
                 openPopoverShortcut: GlobalShortcut? = nil) {
         self.refreshInterval = refreshInterval
         self.badgeWindowIDs = badgeWindowIDs
-        self.providerPlacements = providerPlacements.filter { $0.value != .menuBar }
+        self.providerPlacements = providerPlacements
         self.openPopoverShortcut = openPopoverShortcut
     }
 
-    public func placement(of provider: ProviderID) -> ProviderPlacement {
-        providerPlacements[provider] ?? .menuBar
+    /// The default is the provider's own: the settings only know a provider by id.
+    public func placement(of provider: ProviderID, defaultingTo defaultPlacement: ProviderPlacement)
+        -> ProviderPlacement {
+        providerPlacements[provider] ?? defaultPlacement
     }
 
+    /// Kept even when it matches the default, which can differ between providers.
     public mutating func place(_ provider: ProviderID, _ placement: ProviderPlacement) {
-        providerPlacements[provider] = placement == .menuBar ? nil : placement
+        providerPlacements[provider] = placement
     }
 
     /// Replaces an interval the Settings window does not offer with the default, and drops a shortcut that could

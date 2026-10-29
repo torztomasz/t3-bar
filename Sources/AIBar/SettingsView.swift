@@ -74,7 +74,8 @@ struct SettingsView: View {
         let windows = state?.snapshot?.windows ?? []
         let shownWindowID = state?.badgeWindow(for: settings.badgeWindowIDs[provider.id])?.id
         return Picker(provider.displayName, selection: Binding(
-            get: { ProviderChoice(placement: settings.placement(of: provider.id), windowID: shownWindowID) },
+            get: { ProviderChoice(placement: settings.placement(of: provider.id, defaultingTo: provider.defaultPlacement),
+                                  windowID: shownWindowID) },
             set: { choice in settingsStore.update { choice.apply(to: &$0, for: provider.id) } }
         )) {
             Section("Menu bar and popover") {

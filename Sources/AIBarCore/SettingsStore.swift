@@ -54,7 +54,7 @@ public final class SettingsStore {
         ).supported()
     }
 
-    /// A placement this version does not know is skipped, which leaves its provider in the menu bar.
+    /// A placement this version does not know is skipped, which leaves its provider where it is by default.
     private static func readProviderPlacements(from defaults: UserDefaults) -> [ProviderID: ProviderPlacement] {
         let stored = defaults.object(forKey: Key.providerPlacements) as? [String: String] ?? [:]
         return Dictionary(uniqueKeysWithValues: stored.compactMap { provider, placement in

@@ -50,7 +50,7 @@ final class StatusItemController: NSObject {
 
     /// Badge and tooltip both describe, for each provider, the window chosen for it in settings.
     private func render() {
-        let readings = shownStates.filter { settingsStore.settings.placement(of: $0.id) == .menuBar }.map { state in
+        let readings = shownStates.filter { $0.placement(in: settingsStore.settings) == .menuBar }.map { state in
             BadgeReading(state: state, window: state.badgeWindow(for: settingsStore.settings.badgeWindowIDs[state.id]))
         }
         let height = BadgeSize.height(menuBarHeights: NSScreen.screens.map(\.menuBarHeight))

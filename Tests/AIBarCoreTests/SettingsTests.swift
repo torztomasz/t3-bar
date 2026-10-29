@@ -10,9 +10,12 @@ import Testing
                                              openPopoverShortcut: nil))
     }
 
-    // A provider the settings have never heard of is one added by an update, which the user should get to see.
-    @Test func everyProviderStartsOutInTheMenuBar() {
-        #expect(AppSettings().placement(of: ProviderID("added-later")) == .menuBar)
+    // A provider the settings have never heard of is one added by an update or found in T3 Code; it starts out
+    // wherever it asks to.
+    @Test(arguments: [ProviderPlacement.menuBar, .popoverOnly])
+    func everyProviderStartsOutWhereItDoesByDefault(_ defaultPlacement: ProviderPlacement) {
+        #expect(AppSettings().placement(of: ProviderID("added-later"), defaultingTo: defaultPlacement)
+                == defaultPlacement)
     }
 }
 
@@ -24,8 +27,8 @@ import Testing
 
         settings.place(chatGPT, .popoverOnly)
 
-        #expect(settings.placement(of: chatGPT) == .popoverOnly)
-        #expect(settings.placement(of: claude) == .menuBar)
+        #expect(settings.placement(of: chatGPT, defaultingTo: .menuBar) == .popoverOnly)
+        #expect(settings.placement(of: claude, defaultingTo: .menuBar) == .menuBar)
     }
 
     // The poller skips a provider that is off; one left to the popover still needs its data.
@@ -35,16 +38,13 @@ import Testing
         #expect(!ProviderPlacement.off.isFetched)
     }
 
-    // The menu bar is stored as no entry at all, so going back to it must leave nothing behind.
-    @Test(arguments: [ProviderPlacement.popoverOnly, .off])
-    func returningAProviderToTheMenuBarRestoresTheDefaults(from placement: ProviderPlacement) {
+    // A T3 Code provider starts in the popover, so the menu bar has to be remembered as a choice of its own.
+    @Test func aChoiceThatMatchesAnotherProvidersDefaultStillOverridesItsOwn() {
         var settings = AppSettings()
 
-        settings.place(chatGPT, placement)
-        settings.place(chatGPT, .menuBar)
+        settings.place(antigravity, .menuBar)
 
-        #expect(settings == AppSettings())
-        #expect(settings == AppSettings(providerPlacements: [chatGPT: .menuBar]))
+        #expect(settings.placement(of: antigravity, defaultingTo: .popoverOnly) == .menuBar)
     }
 }
 
@@ -79,7 +79,8 @@ import Testing
             store.update { $0.place(chatGPT, .off) }
             store.update { $0.place(chatGPT, .menuBar) }
 
-            #expect(SettingsStore(defaults: defaults).settings.placement(of: chatGPT) == .menuBar)
+            #expect(SettingsStore(defaults: defaults).settings.placement(of: chatGPT, defaultingTo: .popoverOnly)
+                    == .menuBar)
         }
     }
 
@@ -226,6 +227,7 @@ import Testing
 }
 
 private let claude = ProviderID("claude")
+private let antigravity = ProviderID("t3code:antigravity")
 private let chatGPT = ProviderID("chatgpt")
 
 @MainActor private func withIsolatedDefaults(_ body: (UserDefaults) -> Void) {

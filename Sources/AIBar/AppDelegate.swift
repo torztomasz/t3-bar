@@ -8,7 +8,7 @@ import os
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private let settingsStore = SettingsStore(defaults: .standard)
-    private lazy var usage = UsageController(providers: [ClaudeUsageProvider(), ChatGPTUsageProvider()],
+    private lazy var usage = UsageController(discoverProviders: { UsageProviders.all() },
                                              settingsStore: settingsStore)
     private lazy var hotKey = PopoverHotKey(settingsStore: settingsStore)
     private lazy var settingsWindow = SettingsWindowController(
