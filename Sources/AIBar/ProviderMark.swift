@@ -13,12 +13,16 @@ enum ProviderMark {
         images[provider] ?? monogram(name)
     }
 
-    /// Drawn on the logos' 24-unit grid, so it scales down to the same size and weight as they do.
+    /// Drawn on the logos' 24-unit grid, as tall as they are and no wider, so it scales down to match them.
     private static func monogram(_ name: String) -> NSImage {
         let letter = (name.first.map { String($0).uppercased() } ?? "?") as NSString
-        let font = NSFont.systemFont(ofSize: 24, weight: .heavy)
+        let grid: CGFloat = 24
+        let heavy = NSFont.systemFont(ofSize: grid, weight: .heavy)
+        let fullHeight = heavy.withSize(grid * grid / heavy.capHeight)
+        let fullWidth = letter.size(withAttributes: [.font: fullHeight]).width
+        let font = fullWidth > grid ? fullHeight.withSize(fullHeight.pointSize * grid / fullWidth) : fullHeight
         let attributes: [NSAttributedString.Key: Any] = [.font: font, .foregroundColor: NSColor.black]
-        return NSImage(size: NSSize(width: 24, height: 24), flipped: false) { bounds in
+        return NSImage(size: NSSize(width: grid, height: grid), flipped: false) { bounds in
             let width = letter.size(withAttributes: attributes).width
             // Centres the capital, not the line box, which has room below for descenders.
             letter.draw(at: NSPoint(x: bounds.midX - width / 2, y: bounds.midY - font.capHeight / 2 + font.descender),

@@ -91,7 +91,12 @@ struct SettingsView: View {
         let hasNoRoom = !isInMenuBar && isMenuBarFull
         return Picker(provider.displayName, selection: Binding(
             get: { ProviderChoice(placement: shownPlacement, windowID: shownWindowID) },
-            set: { choice in settingsStore.update { choice.apply(to: &$0, for: provider.id) } }
+            set: { choice in
+                settingsStore.update { settings in
+                    settings.moveMenuBarOverflowToPopover(among: providerPlacements)
+                    choice.apply(to: &settings, for: provider.id)
+                }
+            }
         )) {
             Section("Menu bar and popover") {
                 if windows.isEmpty {
@@ -108,7 +113,11 @@ struct SettingsView: View {
     }
 
     private var menuBarProviders: [ProviderID] {
-        settingsStore.settings.menuBarProviders(among: usage.providers.map { ($0.id, $0.defaultPlacement) })
+        settingsStore.settings.menuBarProviders(among: providerPlacements)
+    }
+
+    private var providerPlacements: [(id: ProviderID, defaultPlacement: ProviderPlacement)] {
+        usage.providers.map { ($0.id, $0.defaultPlacement) }
     }
 
     private var isMenuBarFull: Bool {

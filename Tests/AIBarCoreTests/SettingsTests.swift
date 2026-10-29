@@ -68,6 +68,25 @@ import Testing
         #expect(settings.menuBarProviders(among: appProviders) == [claude, chatGPT])
     }
 
+    @Test func aProviderThatIsOffTakesNoPlace() {
+        var settings = AppSettings()
+        settings.place(chatGPT, .off)
+
+        #expect(settings.menuBarProviders(among: appProviders) == [claude])
+    }
+
+    // Settings shows the provider left out as Popover only, so freeing a place must not bring it back unasked.
+    @Test func makingRoomDoesNotBringBackAProviderShownInThePopover() {
+        var settings = AppSettings()
+        settings.place(antigravity, .menuBar)
+
+        settings.moveMenuBarOverflowToPopover(among: appProviders)
+        settings.place(chatGPT, .popoverOnly)
+
+        #expect(settings.menuBarProviders(among: appProviders) == [claude])
+        #expect(settings.placement(of: antigravity, defaultingTo: .popoverOnly) == .popoverOnly)
+    }
+
     @Test func nothingPlacedThereLeavesItEmpty() {
         var settings = AppSettings()
         for (provider, _) in appProviders {

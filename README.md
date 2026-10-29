@@ -43,8 +43,8 @@ the reset time yields the projected usage. Readings are stored per window under
 Settings… in the popover (or ⌘, while it is open) opens Settings: launch at login, how often to refresh
 (1 to 15 minutes, default 5) and an optional shortcut that opens the popover from
 any app (none by default). Each provider has one choice: which of its windows the pill shows, "Popover only", which keeps it
-out of the menu bar, or "Off", which also stops fetching it. The menu bar fits two providers, so once two are there the
-others can only be "Popover only" until one makes room. Providers found in T3 Code start out "Popover only", and any
+out of the menu bar, or "Off", which also stops fetching it. The menu bar fits two providers, so once two are there no
+other can be placed there until one makes room. Providers found in T3 Code start out "Popover only", and any
 provider without a logo is marked in the pill with its initial. With no provider in the menu bar the item
 shows a gauge icon, so the popover stays within reach. A Hyper key (all of ⌃⌥⇧⌘, e.g. Caps Lock remapped by Karabiner-Elements or Raycast)
 shows as ✦. The shortcut needs ⌃ or ⌘ unless it is a function key, because macOS 15 ignores global shortcuts

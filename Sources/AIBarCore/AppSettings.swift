@@ -44,6 +44,19 @@ public struct AppSettings: Equatable, Sendable {
             .prefix(Self.menuBarCapacity))
     }
 
+    /// Stores every provider the badge leaves out as Popover only, which is how Settings shows it, so making room
+    /// in the menu bar does not bring one back that the user was told is in the popover.
+    public mutating func moveMenuBarOverflowToPopover(
+        among providers: [(id: ProviderID, defaultPlacement: ProviderPlacement)]
+    ) {
+        let shown = menuBarProviders(among: providers)
+        for provider in providers
+        where placement(of: provider.id, defaultingTo: provider.defaultPlacement) == .menuBar
+            && !shown.contains(provider.id) {
+            place(provider.id, .popoverOnly)
+        }
+    }
+
     /// Kept even when it matches the default, which can differ between providers.
     public mutating func place(_ provider: ProviderID, _ placement: ProviderPlacement) {
         providerPlacements[provider] = placement

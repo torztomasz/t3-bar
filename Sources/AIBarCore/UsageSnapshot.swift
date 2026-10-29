@@ -14,9 +14,9 @@ public struct UsageSnapshot: Equatable, Sendable {
     }
 
     /// The window the menu bar badge shows unless the user picks another: the 5-hour one, because it is the limit a
-    /// user runs into mid-session.
+    /// user runs into mid-session. A provider without one, such as a weekly-only plan, shows its first window.
     public var primaryWindow: UsageWindow? {
-        windows.first { $0.kind == .fiveHour }
+        windows.first { $0.kind == .fiveHour } ?? windows.first
     }
 
     /// The badge's window for the user's choice `id`; nil, or an id this snapshot no longer reports, means the

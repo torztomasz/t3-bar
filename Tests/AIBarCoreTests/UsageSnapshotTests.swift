@@ -12,14 +12,20 @@ import Testing
         #expect(snapshot.primaryWindow == fiveHour)
     }
 
-    @Test func isNilWhenTheProviderReportsNoFiveHourWindow() {
+    // E.g. ChatGPT on a weekly-only plan, or Antigravity through T3 Code: still something to show.
+    @Test func isTheFirstWindowWhenTheProviderReportsNoFiveHourWindow() {
+        let weekly = window("weekly_all", kind: .weekly)
         let snapshot = snapshot(windows: [
-            window("weekly_all", kind: .weekly),
+            weekly,
             window("weekly_scoped:Fable", kind: .weeklyModel(name: "Fable")),
             window("mystery", kind: .other),
         ])
 
-        #expect(snapshot.primaryWindow == nil)
+        #expect(snapshot.primaryWindow == weekly)
+    }
+
+    @Test func isNilWithoutWindows() {
+        #expect(snapshot(windows: []).primaryWindow == nil)
     }
 }
 
