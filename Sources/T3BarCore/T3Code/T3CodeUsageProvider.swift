@@ -32,15 +32,17 @@ public struct T3CodeHubAccountProvider: UsageProvider {
     public let displayName: String
     public let driver: String
     public let defaultPlacement = ProviderPlacement.popoverOnly
+    public let pool: UsagePool?
     private let hubID: String
     private let accountID: String
     private let hubs: T3CodeHubs
 
-    /// Named by its email, which is how a pool's accounts are told apart; the hub's own id is the fallback.
-    public init(account: T3CodeHubAccount, in hub: T3CodeHub, hubs: T3CodeHubs) {
+    /// `name` tells the account apart from the rest of the hub; see `T3CodeHubAccount.names(in:)`.
+    public init(account: T3CodeHubAccount, named name: String, in hub: T3CodeHub, hubs: T3CodeHubs) {
         id = ProviderID("cliproxy:\(hub.id):\(account.id)")
-        displayName = account.email ?? account.id
+        displayName = name
         driver = account.driver
+        pool = UsagePool(id: "cliproxy:\(hub.id)", name: hub.label)
         hubID = hub.id
         accountID = account.id
         self.hubs = hubs

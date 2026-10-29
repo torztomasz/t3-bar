@@ -10,9 +10,19 @@ public protocol UsageProvider: Sendable {
     var driver: String { get }
     /// Where the provider appears until the user places it.
     var defaultPlacement: ProviderPlacement { get }
+    /// The providers of one pool share a section in the popover, each limit listing every account's bar; nil gives
+    /// the provider a section of its own.
+    var pool: UsagePool? { get }
     func fetchUsage() async throws -> UsageSnapshot
 }
 
 extension UsageProvider {
     public var defaultPlacement: ProviderPlacement { .menuBar }
+    public var pool: UsagePool? { nil }
+}
+
+/// Accounts used as one, such as those behind a cliproxy hub.
+public struct UsagePool: Hashable, Sendable {
+    public let id: String
+    public let name: String
 }

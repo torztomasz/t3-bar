@@ -165,6 +165,7 @@ struct ProviderState: Identifiable {
     let displayName: String
     let driver: String
     let defaultPlacement: ProviderPlacement
+    let pool: UsagePool?
     /// The last successful fetch; kept through failures.
     var snapshot: UsageSnapshot?
     /// For the windows of `snapshot`; a window of unknown length has none.
@@ -178,6 +179,7 @@ struct ProviderState: Identifiable {
         displayName = provider.displayName
         driver = provider.driver
         defaultPlacement = provider.defaultPlacement
+        pool = provider.pool
     }
 
     /// Derived rather than stored so it can never disagree with the snapshot it describes.

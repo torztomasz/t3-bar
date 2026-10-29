@@ -87,9 +87,11 @@ import Testing
         let providers = UsageProviders.all(t3Code: cache, hubs: hubs)
 
         #expect(providers.map(\.id.rawValue) == ["claudeAgent", "cliproxy:home:claude-a.json"])
-        #expect(providers.last?.displayName == "a@example.com")
+        #expect(providers.last?.displayName == "Claude (a@example.com)")
         #expect(providers.last?.driver == "claudeAgent")
         #expect(providers.last?.defaultPlacement == .popoverOnly)
+        #expect(providers.last?.pool == UsagePool(id: "cliproxy:home", name: "hub.local"))
+        #expect(providers.first?.pool == nil)
     }
 
     @Test func anAccountReadsItsLatestUsage() async throws {
@@ -134,6 +136,42 @@ import Testing
         #expect(provider.defaultPlacement == .popoverOnly)
         let error = await #expect(throws: T3CodeUsageError.self) { try await provider.fetchUsage() }
         #expect(error?.errorDescription == "T3 Code can't read this hub's accounts: The hub answered with HTTP 401.")
+    }
+}
+
+// Method: name accounts as a hub lists them and read the names back, checking each stays short but tells the
+// account apart from the rest of the hub.
+@Suite struct HubAccountNames {
+    @Test func anAccountShowsItsProviderAndTheStartOfItsEmail() {
+        #expect(names(("codex", "tomasz.torz@l2beat.com"), ("codex", "tomasz.michal.torz@gmail.com"))
+                == ["Codex (to…@l2beat.com)", "Codex (to…@gmail.com)"])
+    }
+
+    // Both would read `to…@gmail.com`; `tomasz.m` and `tomasz.t` are where they part.
+    @Test func accountsOnOneDomainShowAsMuchAsTellsThemApart() {
+        #expect(names(("codex", "tomasz.michal@gmail.com"), ("claudeAgent", "tomasz.torz@gmail.com"))
+                == ["Codex (tomasz.m…@gmail.com)", "Claude (tomasz.t…@gmail.com)"])
+    }
+
+    @Test func aShortAddressIsShownWhole() {
+        #expect(names(("codex", "ab@x.io"), ("codex", "a@y.io")) == ["Codex (ab@x.io)", "Codex (a@y.io)"])
+    }
+
+    // One address signed in to both providers: the provider already tells them apart.
+    @Test func theSameEmailForTwoProvidersIsShortenedAsUsual() {
+        #expect(names(("codex", "tomasz@gmail.com"), ("claudeAgent", "tomasz@gmail.com"))
+                == ["Codex (to…@gmail.com)", "Claude (to…@gmail.com)"])
+    }
+
+    @Test func withoutAnEmailTheHubsIDStandsIn() {
+        #expect(names(("codex", nil)) == ["Codex (codex-1.json)"])
+    }
+
+    private func names(_ accounts: (driver: String, email: String?)...) -> [String] {
+        T3CodeHubAccount.names(of: accounts.enumerated().map { index, account in
+            T3CodeHubAccount(id: "\(account.driver)-\(index + 1).json", driver: account.driver, email: account.email,
+                             usage: nil)
+        })
     }
 }
 

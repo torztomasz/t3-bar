@@ -144,6 +144,42 @@ public struct T3CodeHubAccount: Equatable, Sendable {
     public let usage: T3CodeUsage?
 }
 
+extension T3CodeHubAccount {
+    /// `Codex (to…@gmail.com)`: the provider, then as much of the email as tells the account apart from the others
+    /// in `accounts`, at least two characters. A full email is too long for a popover row or a Settings label.
+    static func names(of accounts: [T3CodeHubAccount]) -> [String] {
+        let emails = accounts.map { $0.email.flatMap(Email.init) }
+        return zip(accounts, emails).map { account, email in
+            guard let email else { return "\(account.providerName) (\(account.id))" }
+            let others = emails.compactMap { $0 }.filter { $0 != email && $0.domain == email.domain }
+            let length = (2...max(2, email.local.count)).first { length in
+                !others.contains { $0.local.hasPrefix(email.local.prefix(length)) }
+            } ?? email.local.count
+            let local = length < email.local.count ? "\(email.local.prefix(length))…" : email.local
+            return "\(account.providerName) (\(local)@\(email.domain))"
+        }
+    }
+
+    private var providerName: String {
+        switch driver {
+        case "claudeAgent": "Claude"
+        case "codex": "Codex"
+        default: driver
+        }
+    }
+
+    private struct Email: Equatable {
+        let local: String
+        let domain: String
+
+        init?(_ text: String) {
+            guard let at = text.lastIndex(of: "@"), at != text.startIndex else { return nil }
+            local = String(text[..<at])
+            domain = String(text[text.index(after: at)...])
+        }
+    }
+}
+
 enum T3CodeServerError: Error, LocalizedError {
     case notRunning
     case noToken

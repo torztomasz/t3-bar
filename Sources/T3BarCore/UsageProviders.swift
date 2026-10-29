@@ -12,8 +12,10 @@ public enum UsageProviders {
             if let error = hub.error, hub.accounts.isEmpty {
                 return [T3CodeUnreadHubProvider(hub: hub, reason: error)]
             }
-            return hub.accounts.filter { $0.usage != nil }
-                .map { T3CodeHubAccountProvider(account: $0, in: hub, hubs: hubs) }
+            let shown = hub.accounts.filter { $0.usage != nil }
+            return zip(shown, T3CodeHubAccount.names(of: shown)).map { account, name in
+                T3CodeHubAccountProvider(account: account, named: name, in: hub, hubs: hubs)
+            }
         }
         return instances + accounts
     }

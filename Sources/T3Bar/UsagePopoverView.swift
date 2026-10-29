@@ -20,11 +20,18 @@ struct UsagePopoverView: View {
         // popover is open.
         TimelineView(.periodic(from: .now, by: 15)) { context in
             VStack(alignment: .leading, spacing: 0) {
-                ForEach(controller.states) { state in
-                    if state.id != controller.states.first?.id { MenuSeparator() }
-                    ProviderSection(state: state, now: context.date)
-                        .padding(.horizontal, MenuMetrics.contentInset)
-                        .padding(.vertical, 8)
+                let sections = PopoverSection.grouping(controller.states)
+                ForEach(sections) { section in
+                    if section.id != sections.first?.id { MenuSeparator() }
+                    Group {
+                        if let pool = section.pool {
+                            PoolSection(pool: pool, states: section.states, now: context.date)
+                        } else if let state = section.states.first {
+                            ProviderSection(state: state, now: context.date)
+                        }
+                    }
+                    .padding(.horizontal, MenuMetrics.contentInset)
+                    .padding(.vertical, 8)
                 }
                 if controller.states.isEmpty {
                     Text(controller.providers.isEmpty ? UsageText.noT3Code : UsageText.noProviders)
@@ -155,8 +162,83 @@ private struct ProviderSection: View {
     }
 }
 
+/// A provider of its own, or the accounts of one pool, which the popover shows together.
+private struct PopoverSection: Identifiable {
+    let pool: UsagePool?
+    let states: [ProviderState]
+
+    var id: String { pool?.id ?? states.first?.id.rawValue ?? "" }
+
+    /// Each pool's accounts gather where its first account is listed, keeping the providers' order otherwise.
+    static func grouping(_ states: [ProviderState]) -> [PopoverSection] {
+        var sections: [PopoverSection] = []
+        for state in states {
+            if let pool = state.pool, let index = sections.firstIndex(where: { $0.pool == pool }) {
+                sections[index] = PopoverSection(pool: pool, states: sections[index].states + [state])
+            } else {
+                sections.append(PopoverSection(pool: state.pool, states: [state]))
+            }
+        }
+        return sections
+    }
+}
+
+/// The accounts of a pool, limit by limit: each limit's title, then every account's bar for it, so which account is
+/// running low shows at a glance. An account without data says why below the limits.
+private struct PoolSection: View {
+    let pool: UsagePool
+    let states: [ProviderState]
+    let now: Date
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text(pool.name).font(.headline.weight(.bold))
+            ForEach(limits, id: \.title) { limit in
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(limit.title).font(.subheadline.weight(.semibold)).foregroundStyle(.secondary)
+                    ForEach(states) { state in
+                        if let window = state.snapshot?.windows.first(where: { $0.title == limit.title }) {
+                            WindowRow(window: window, label: state.displayName, forecast: state.forecasts[window.id],
+                                      now: now)
+                        }
+                    }
+                }
+            }
+            ForEach(states.filter { $0.snapshot == nil }) { state in
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(state.displayName)
+                    Text(state.lastError?.localizedDescription ?? "Loading…")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+        }
+    }
+
+    /// Every limit any account reports, the 5-hour one first, as a single account lists them. Matched by title, not
+    /// id: Codex names windows by slot, so one account's weekly window can share an id with another's 5-hour one.
+    private var limits: [UsageWindow] {
+        var seen = Set<String>()
+        let all = states.flatMap { $0.snapshot?.windows ?? [] }.filter { seen.insert($0.title).inserted }
+        return all.enumerated().sorted { (rank($0.element.kind), $0.offset) < (rank($1.element.kind), $1.offset) }
+            .map(\.element)
+    }
+
+    private func rank(_ kind: UsageWindow.Kind) -> Int {
+        switch kind {
+        case .fiveHour: 0
+        case .weekly: 1
+        case .weeklyModel: 2
+        case .other: 3
+        }
+    }
+}
+
 private struct WindowRow: View {
     let window: UsageWindow
+    /// What the row is named by: the window's title, or within a pool the account's name.
+    var label: String?
     let forecast: DrainForecast?
     let now: Date
 
@@ -165,7 +247,9 @@ private struct WindowRow: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
             HStack(alignment: .firstTextBaseline) {
-                Text(window.title)
+                Text(label ?? window.title)
+                    .lineLimit(1)
+                    .truncationMode(.middle)
                 Spacer()
                 Text(UsageText.percent(window.percentUsed))
                     .font(.body.weight(.semibold).monospacedDigit())
